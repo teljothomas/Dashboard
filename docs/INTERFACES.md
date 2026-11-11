@@ -224,9 +224,9 @@ sync.registerEntity(entityType, {scopes, create?, update?, submit?, cancel?, sco
 
 Sync wire details settled in WP-03.4 (contracts: `packages/contracts/src/sync.ts`): success bodies use the
 section 1 envelope (`{ data: { results } }`, `{ data: { changes, nextCursor, hasMore } }`); `GET /sync/conflicts`
-lists own conflicts (approvers: `expense.approve`, `advance.approve`, `wages.approve`, `inventory.writeoff.approve`
-see all), `status=OPEN|ALL|RESOLVED_*`, cursor = last conflict id in `meta.nextCursor`; `POST /sync/conflicts/:id/resolve`
-takes `{resolution, values?, note?}` (`values` only for MERGED) and returns `{ conflict, entity|null }`; a body `deviceId`
-must equal the session device. Only final results (APPLIED/CONFLICT/REJECTED) are stored for replay; BLOCKED_BY_PREVIOUS
+lists own conflicts plus those of entity types whose handler `approverPermission` (e.g. `expense.approve`) the caller holds
+(types without one are owner-only), `status=OPEN|ALL|RESOLVED_*`, cursor = last conflict id in `meta.nextCursor`; `POST /sync/conflicts/:id/resolve`
+takes `{resolution, values?, note?}` (`values` only for MERGED) and returns `{ conflict, entity|null }`; push requires a session bound to a
+device and the body `deviceId` must equal it (the session device is what is stored and audited). Only final results (APPLIED/CONFLICT/REJECTED) are stored for replay; BLOCKED_BY_PREVIOUS
 and DUPLICATE_SUSPECTED are transient. Any code that writes a syncable table outside the sync server must call
 `lockSyncWrite(tx)` first (pull takes the exclusive lock so a cursor never skips an uncommitted row).
