@@ -6,20 +6,20 @@ Project state: PRE_DEVELOPMENT_COMPLETE
 Application coding: NOT_STARTED
 Current stage: READY_FOR_SONNET_IMPLEMENTATION
 Current phase: PHASE-00 (Sonnet part)
-Current task: WP-00.2
+Current task: WP-00.3
 Assigned model: Sonnet 5.5
 Last updated: 2026-11-11
-Last verified commit: WP-00.1 first commit on main (`git log --oneline`)
-Next action: WP-00.2
+Last verified commit: WP-00.2 commit on main (`git log --oneline`)
+Next action: WP-00.3
 
 ## CURRENT POSITION
 
 Stage: READY_FOR_SONNET_IMPLEMENTATION
 Phase: PHASE-00 Governance, discovery and project readiness
-Task ID: WP-00.2
+Task ID: WP-00.3
 Task status: READY
 Branch: main (remote origin recorded, not pushed)
-Last completed work unit: WP-00.1 (governance integrity check + git init, Sonnet 5.5)
+Last completed work unit: WP-00.2 (discovery questionnaires, Sonnet 5.5)
 
 ## PHASE TRACKER
 
@@ -27,7 +27,7 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 
 | Phase | Name | Status | Completion |
 |---|---|---|---|
-| 00 | Governance and discovery | IN_PROGRESS | Opus part done; Sonnet WPs 1/4 |
+| 00 | Governance and discovery | IN_PROGRESS | Opus part done; Sonnet WPs 2/4 |
 | 01 | Architecture and contracts | COMPLETE | Baseline v1.0 (WP-01.R / 01.X run on demand) |
 | 02 | Application foundation | NOT_STARTED | 0/5 |
 | 03 | Database and core services | NOT_STARTED | 0/6 |
@@ -50,15 +50,16 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 |---|---|---|---|
 | ARCH-000 | 43 governance/architecture/prompt files; reviews A–E in docs/reviews/REV-ARCH-000.md; cross-reference check (WP counts, TS/OD/ADR/BR IDs) clean | n/a (no code); doc consistency checks executed and passing | none (no git yet) |
 | WP-00.1 | Integrity check clean (all listed files present; WP counts match registry for all 16 phases); git init -b main; .gitignore; .gitattributes; origin remote recorded (not pushed) | `git log --oneline` + `git status --short` executed at close (1 commit, clean) | first commit on main |
+| WP-00.2 | docs/discovery/{TALLY_DISCOVERY,CA_QUESTIONS,OWNER_QUESTIONS}.md; DC-01..15 + all 32 OPEN ODs, each OD once | grep duplicate check: no output; unique OD count 32 = OPEN rows 32; set diff vs register: equal | WP-00.2 commit |
 
 ## ACTIVE TASK
 
-Objective: issue discovery questionnaires (Tally, CA, owner).
+Objective: token measurement tool (tools/token-report.mjs + tests).
 Assigned agent: Sonnet 5.5
-Required prompt: prompts/phases/PHASE-00-GOVERNANCE-DISCOVERY.md → WP-00.2
-Required context files: docs/TALLY_INTEGRATION.md §2–3, docs/OPEN_DECISIONS.md
-Allowed modifications: docs/discovery/*.md (new), STATUS.md
-Acceptance criteria: per WP-00.2 (three files, OD coverage check passes, no Tally-modifying instructions)
+Required prompt: prompts/phases/PHASE-00-GOVERNANCE-DISCOVERY.md → WP-00.3
+Required context files: docs/DEVELOPMENT_PLAN.md §5
+Allowed modifications: tools/token-report.mjs, tools/token-report.test.mjs, tools/fixtures/sample-session.jsonl, docs/DEVELOPMENT_PLAN.md §5 (usage line), STATUS.md
+Acceptance criteria: per WP-00.3 (tests pass; real run non-zero totals; no content leaked)
 
 ## OPEN BLOCKERS
 
@@ -66,7 +67,8 @@ None for Phase 00–04.
 
 ## OWNER APPROVAL REQUIRED
 
-- Answer discovery questions (created in WP-00.2 under docs/discovery/; register: docs/OPEN_DECISIONS.md). Not blocking until WP-05.7 / Phase 11 / Phase 15.
+- Answer docs/discovery/*.md (non-blocking until Phase 05.7/11/15): TALLY_DISCOVERY.md (owner/Tally PC), OWNER_QUESTIONS.md (owner), CA_QUESTIONS.md (CA). Register: docs/OPEN_DECISIONS.md.
+- Owner to decide whether to push `main` to https://github.com/teljothomas/Dashboard.git (remote recorded; no push until approved, ADR-063).
 - Engage a CA/accountant for ACCT decisions (OD-010..022, OD-033, OD-047, OD-048) before Phase 11 production work.
 - Docker daemon must be running for WP-02.4 (Docker CLI present; daemon not verified).
 - Install .NET 10 SDK on the dev PC before WP-05.0 (not installed as of 2026-11-11).
@@ -80,11 +82,11 @@ No application code yet; nothing executed.
 
 ## NEXT EXACT ACTION
 
-Task ID: WP-00.2
+Task ID: WP-00.3
 Phase prompt: prompts/phases/PHASE-00-GOVERNANCE-DISCOVERY.md
 Model: Sonnet 5.5
-Objective: discovery questionnaires (TALLY_DISCOVERY, CA_QUESTIONS, OWNER_QUESTIONS)
-Files to read: docs/TALLY_INTEGRATION.md §2–3, docs/OPEN_DECISIONS.md
-Expected output: 3 files under docs/discovery/; every OPEN OD in exactly one file
-Required tests: `grep -o "OD-0[0-9][0-9]" docs/discovery/*.md | sort | uniq -d` returns nothing; count equals OPEN ODs
-After this: WP-00.3 → WP-00.4 → WP-02.1
+Objective: token measurement tool
+Files to read: docs/DEVELOPMENT_PLAN.md §5
+Expected output: tools/token-report.mjs (+ test, fixture); DEVELOPMENT_PLAN §5 usage line
+Required tests: `node --test tools/`; `node tools/token-report.mjs --since <today>T00:00:00Z`
+After this: WP-00.4 → WP-02.1
