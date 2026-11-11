@@ -822,3 +822,32 @@ describe('start', () => {
     expect(server.pushes).toHaveLength(3);
   });
 });
+
+describe('session change during a run', () => {
+  it('discards a pull response fetched after the user changed, and stores nothing', async () => {
+    const server = installServer();
+    server.pullHandler = (scope, cursor) => {
+      user = 'u2'; // sign-in as someone else while the request is in flight
+      return {
+        changes: [
+          {
+            entityType: 'expense',
+            entityId: uuidv7(),
+            syncSeq: 1,
+            deleted: false,
+            data: { id: 'x', version: 1 },
+          },
+        ],
+        nextCursor: scope === 'mine' ? 1 : cursor,
+        hasMore: false,
+      };
+    };
+
+    const run = await engine.trigger('manual');
+
+    expect(run.status).toBe('session-changed');
+    expect(await db.records.count()).toBe(0);
+    expect(await getMeta(db, META.cursor('mine', 'u1'))).toBeUndefined();
+    expect(timers).toHaveLength(0); // not a failure: no backoff
+  });
+});

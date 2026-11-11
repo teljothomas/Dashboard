@@ -45,7 +45,7 @@ export const apiTransport: SyncTransport = {
 };
 
 export type SyncRunStatus =
-  'ok' | 'error' | 'paused' | 'no-session' | 'offline' | 'backoff' | 'locked';
+  'ok' | 'error' | 'paused' | 'no-session' | 'offline' | 'backoff' | 'locked' | 'session-changed';
 
 export interface SyncRunResult {
   status: SyncRunStatus;
@@ -111,6 +111,14 @@ function defaultSchedule(fn: () => void, ms: number): () => void {
 
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
+}
+
+/** The signed-in user changed while a run was in flight: stop, never send or store under the wrong user. */
+class SessionChanged extends Error {
+  constructor() {
+    super('Session changed during sync');
+    this.name = 'SessionChanged';
+  }
 }
 
 class AuthExpired extends Error {
@@ -190,6 +198,11 @@ export function createSyncEngine(options: SyncEngineOptions): SyncEngine {
       const ids = sent.map((e) => e.mutationId);
       await markSending(db, ids);
       await refreshCounts();
+      if (getUserId() !== userId) {
+        // The cookie now belongs to someone else: these entries must not be sent with it.
+        await releaseSending(db, ids, { countAttempt: false });
+        throw new SessionChanged();
+      }
 
       let body: unknown;
       try {
@@ -326,6 +339,9 @@ export function createSyncEngine(options: SyncEngineOptions): SyncEngine {
         }
         throw err;
       }
+      if (getUserId() !== userId) {
+        throw new SessionChanged();
+      }
       const parsed = PullResponse.safeParse(body);
       if (!parsed.success) {
         throw new Error('Malformed pull response');
@@ -365,6 +381,9 @@ export function createSyncEngine(options: SyncEngineOptions): SyncEngine {
       return totals;
     } catch (err) {
       await refreshCounts().catch(() => undefined);
+      if (err instanceof SessionChanged) {
+        return { ...totals, status: 'session-changed' };
+      }
       if (err instanceof AuthExpired) {
         return pause(userId);
       }
