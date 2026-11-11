@@ -6,20 +6,20 @@ Project state: PRE_DEVELOPMENT_COMPLETE
 Application coding: NOT_STARTED
 Current stage: READY_FOR_SONNET_IMPLEMENTATION
 Current phase: PHASE-00 (Sonnet part)
-Current task: WP-00.3
+Current task: WP-00.4
 Assigned model: Sonnet 5.5
 Last updated: 2026-11-11
-Last verified commit: WP-00.2 commit on main (`git log --oneline`)
-Next action: WP-00.3
+Last verified commit: WP-00.3 commit on main (`git log --oneline`)
+Next action: WP-00.4
 
 ## CURRENT POSITION
 
 Stage: READY_FOR_SONNET_IMPLEMENTATION
 Phase: PHASE-00 Governance, discovery and project readiness
-Task ID: WP-00.3
+Task ID: WP-00.4
 Task status: READY
 Branch: main (remote origin recorded, not pushed)
-Last completed work unit: WP-00.2 (discovery questionnaires, Sonnet 5.5)
+Last completed work unit: WP-00.3 (token measurement tool, Sonnet 5.5)
 
 ## PHASE TRACKER
 
@@ -27,7 +27,7 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 
 | Phase | Name | Status | Completion |
 |---|---|---|---|
-| 00 | Governance and discovery | IN_PROGRESS | Opus part done; Sonnet WPs 2/4 |
+| 00 | Governance and discovery | IN_PROGRESS | Opus part done; Sonnet WPs 3/4 |
 | 01 | Architecture and contracts | COMPLETE | Baseline v1.0 (WP-01.R / 01.X run on demand) |
 | 02 | Application foundation | NOT_STARTED | 0/5 |
 | 03 | Database and core services | NOT_STARTED | 0/6 |
@@ -51,15 +51,16 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | ARCH-000 | 43 governance/architecture/prompt files; reviews A–E in docs/reviews/REV-ARCH-000.md; cross-reference check (WP counts, TS/OD/ADR/BR IDs) clean | n/a (no code); doc consistency checks executed and passing | none (no git yet) |
 | WP-00.1 | Integrity check clean (all listed files present; WP counts match registry for all 16 phases); git init -b main; .gitignore; .gitattributes; origin remote recorded (not pushed) | `git log --oneline` + `git status --short` executed at close (1 commit, clean) | first commit on main |
 | WP-00.2 | docs/discovery/{TALLY_DISCOVERY,CA_QUESTIONS,OWNER_QUESTIONS}.md; DC-01..15 + all 32 OPEN ODs, each OD once | grep duplicate check: no output; unique OD count 32 = OPEN rows 32; set diff vs register: equal | WP-00.2 commit |
+| WP-00.3 | tools/token-report.mjs + test + fixture; DEVELOPMENT_PLAN §5 usage line | `node --test`: tests 6, pass 6, fail 0. Real run (--since 2026-11-11): 39 messages, non-zero totals, 0 malformed; output has counts/paths only | WP-00.3 commit |
 
 ## ACTIVE TASK
 
-Objective: token measurement tool (tools/token-report.mjs + tests).
+Objective: toolchain readiness record and Phase 00 gate.
 Assigned agent: Sonnet 5.5
-Required prompt: prompts/phases/PHASE-00-GOVERNANCE-DISCOVERY.md → WP-00.3
-Required context files: docs/DEVELOPMENT_PLAN.md §5
-Allowed modifications: tools/token-report.mjs, tools/token-report.test.mjs, tools/fixtures/sample-session.jsonl, docs/DEVELOPMENT_PLAN.md §5 (usage line), STATUS.md
-Acceptance criteria: per WP-00.3 (tests pass; real run non-zero totals; no content leaked)
+Required prompt: prompts/phases/PHASE-00-GOVERNANCE-DISCOVERY.md → WP-00.4
+Required context files: docs/QUALITY_GATES.md §1
+Allowed modifications: docs/QUALITY_GATES.md §1 environment line, STATUS.md, docs/TASK_LOG.md
+Acceptance criteria: per WP-00.4 (STATUS Phase 00 COMPLETE, next action WP-02.1, environment line dated)
 
 ## OPEN BLOCKERS
 
@@ -82,11 +83,11 @@ No application code yet; nothing executed.
 
 ## NEXT EXACT ACTION
 
-Task ID: WP-00.3
+Task ID: WP-00.4
 Phase prompt: prompts/phases/PHASE-00-GOVERNANCE-DISCOVERY.md
 Model: Sonnet 5.5
-Objective: token measurement tool
-Files to read: docs/DEVELOPMENT_PLAN.md §5
-Expected output: tools/token-report.mjs (+ test, fixture); DEVELOPMENT_PLAN §5 usage line
-Required tests: `node --test tools/`; `node tools/token-report.mjs --since <today>T00:00:00Z`
-After this: WP-00.4 → WP-02.1
+Objective: record toolchain versions; Phase 00 gate
+Files to read: docs/QUALITY_GATES.md §1
+Expected output: environment line updated; STATUS Phase 00 COMPLETE; next action WP-02.1
+Required tests: version commands (node, pnpm, git, docker info, dotnet --list-sdks)
+After this: WP-02.1

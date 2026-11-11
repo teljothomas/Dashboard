@@ -58,6 +58,9 @@ Rules are in CLAUDE.md and SONNET_EXECUTION_PROTOCOL.md. Structural controls:
 - Data source: Claude Code transcripts (`~/.claude/projects/<project-dir-slug>/*.jsonl`), per assistant
   message `usage` (input, cache creation, cache read, output). WP-00.3 builds `tools/token-report.mjs`
   (read-only parser) that sums usage for a session or time window and counts Read tool calls per file.
+  Usage: `node tools/token-report.mjs [--dir <path>] [--since <ISO>] [--until <ISO>] [--session <id>] [--json]`
+  (default dir = this project's transcript folder; prints counts and Read paths only, never message text).
+  Tests: `node --test` (Node 24 cannot take the `tools/` directory as an argument).
 - Per WP, Sonnet records in TASK_LOG: input tokens (incl. cache), output tokens, files read, files
   modified, repeated reads (same file read > 1×), out-of-packet reads, rework flag (WP reopened), tests
   passed/failed, wall time.
