@@ -42,8 +42,20 @@ function unsupported(reason: string): AppError {
   return new AppError('UNSUPPORTED_MEDIA', 'File type is not allowed', { reason });
 }
 
-/** Active-content markers. Best effort on raw bytes (compressed object streams can hide them). */
-const PDF_ACTIVE_CONTENT = /\/(?:JavaScript|JS|Launch|EmbeddedFile|RichMedia)(?![A-Za-z])/;
+/**
+ * Active-content markers. Best effort on raw bytes: compressed object streams can still hide
+ * them, so the real controls are the forced `attachment` download and `nosniff`. `/OpenAction`
+ * and `/URI` are not listed because ordinary PDFs (page jump, hyperlinks) use them.
+ */
+const PDF_ACTIVE_CONTENT =
+  /\/(?:JavaScript|JS|Launch|EmbeddedFile|RichMedia|AA|XFA|SubmitForm|ImportData)(?![A-Za-z0-9])/;
+
+/** Decode PDF name escapes (`/J#61vaScript` is `/JavaScript`) so they cannot dodge the scan. */
+function decodeNameEscapes(text: string): string {
+  return text.replace(/#([0-9a-fA-F]{2})/g, (_m, hex: string) =>
+    String.fromCharCode(parseInt(hex, 16)),
+  );
+}
 
 /**
  * A PDF is stored as is (it cannot be re-encoded), so it must look like one whole PDF: header at
@@ -57,7 +69,7 @@ function checkPdf(buf: Buffer): void {
   if (eof === -1 || tail.slice(eof + 5).trim().length > 0) {
     throw unsupported('pdf-structure');
   }
-  if (PDF_ACTIVE_CONTENT.test(buf.toString('latin1'))) {
+  if (PDF_ACTIVE_CONTENT.test(decodeNameEscapes(buf.toString('latin1')))) {
     throw unsupported('pdf-active-content');
   }
 }

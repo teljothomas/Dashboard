@@ -73,6 +73,7 @@ Acceptance criteria: per WP-03.4
 
 ## OPEN BLOCKERS
 
+- Owner/Opus decision (not blocking WP-03.4): attachment dedupe is global by sha256 per DATA_MODEL section 1, so a second user uploading identical bytes gets the first user's id, and `core.attachments.link` does not check who is linking (security review finding, medium). Recommended: per-uploader rows sharing one blob (`UNIQUE (sha256, uploaded_by)`, DATA_MODEL change) and `link` checking uploader or `canRead`. Decide before WP-03.6 gate; `link` actor check can also land with WP-04.3. PDF active-content scan is best effort (object streams can hide markers); real controls are attachment disposition and nosniff.
 - None for Phase 03. Not blocking: gitleaks and actionlint not installed on the dev PC (secret scan runs in CI; `.github/workflows/ci.yml` is NOT validated with actionlint and has never run on GitHub). .NET SDK absent (blocks WP-05.0).
 
 ## OWNER APPROVAL REQUIRED
@@ -87,7 +88,7 @@ Acceptance criteria: per WP-03.4
 ## QUALITY GATE
 
 Executed 2026-11-11 (WP-03.3 gate):
-- Lint: pass; Typecheck: pass (all 4 packages); Prettier: pass; Unit: pass (domain 57, contracts 34, api 56, web 20); Integration: 107 pass (4 consecutive runs; one earlier run showed a single failure in the worker backoff test while the migrate tests were failing, not reproduced); Build: pass; `db:migrate` applied 0002 then no pending; `pnpm audit --prod`: no known vulnerabilities
+- Lint: pass; Typecheck: pass (all 4 packages); Prettier: pass; Unit: pass (domain 57, contracts 34, api 56, web 20); Integration: 107 pass (4 consecutive runs; worker backoff test flaked twice from a 500 ms clock-skew bound, widened to 5 s; 3 clean runs after the fix; unit api 57); Build: pass; `db:migrate` applied 0002 then no pending; `pnpm audit --prod`: no known vulnerabilities
 - E2E not re-run (web untouched)
 
 WP-03.2 gate:

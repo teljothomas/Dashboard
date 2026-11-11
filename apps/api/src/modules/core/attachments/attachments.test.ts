@@ -126,6 +126,27 @@ describe('processUpload', () => {
     );
   });
 
+  it('PDF scan sees through name escapes and extra action keys, but allows links', async () => {
+    for (const body of [
+      '/S/J#61vaScript/JS(x)',
+      '/#4Aava#53cript',
+      '/AA<</O 1 0 R>>',
+      '/XFA 2 0 R',
+      '/S/SubmitForm',
+    ]) {
+      await expectCode(
+        processUpload(Buffer.from(`%PDF-1.4\n1 0 obj<<${body}>>endobj\n%%EOF\n`)),
+        'UNSUPPORTED_MEDIA',
+      );
+    }
+    const ok = await processUpload(
+      Buffer.from(
+        '%PDF-1.4\n1 0 obj<</OpenAction[2 0 R/Fit]/A<</S/URI/URI(http://a.b)>>>>endobj\n%%EOF\n',
+      ),
+    );
+    expect(ok.mime).toBe('application/pdf');
+  });
+
   it('rejects empty, unknown and undecodable input', async () => {
     await expectCode(processUpload(Buffer.alloc(0)), 'VALIDATION_FAILED');
     await expectCode(processUpload(Buffer.from('plain text')), 'UNSUPPORTED_MEDIA');

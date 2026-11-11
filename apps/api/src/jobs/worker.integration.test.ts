@@ -157,7 +157,7 @@ describe('JobWorker', () => {
     });
     const firstDelay = row.run_at.getTime() - Date.now();
     expect(firstDelay).toBeGreaterThan(50_000);
-    expect(firstDelay).toBeLessThanOrEqual(60_500);
+    expect(firstDelay).toBeLessThanOrEqual(65_000);
     expect(await w.runOnce()).toBe(false);
     expect(calls).toBe(1);
 
@@ -168,7 +168,7 @@ describe('JobWorker', () => {
     expect(row).toMatchObject({ status: 'FAILED', attempts: 2, last_error: 'boom 2' });
     const secondDelay = row.run_at.getTime() - Date.now();
     expect(secondDelay).toBeGreaterThan(110_000);
-    expect(secondDelay).toBeLessThanOrEqual(120_500);
+    expect(secondDelay).toBeLessThanOrEqual(125_000);
 
     // Attempt 3 is the last: DEAD, never retried.
     await owner.query('UPDATE job SET run_at = now() WHERE id = $1', [id]);
