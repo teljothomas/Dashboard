@@ -4,22 +4,22 @@ Project: Meat Trading, Processing & Logistics ERP (working name: TradeX ERP)
 Current release: none
 Project state: FOUNDATION_IN_PROGRESS
 Application coding: STARTED (Phase 02 foundation packages and apps exist)
-Current stage: READY (WP-03.1 complete; WP-03.2 next)
-Current phase: PHASE-03 (1/6)
-Current task: WP-03.2
+Current stage: READY (WP-03.2 complete; WP-03.3 next)
+Current phase: PHASE-03 (2/6)
+Current task: WP-03.3
 Assigned model: Sonnet 5.5
 Last updated: 2026-11-11
 Last verified commit: WP-02.3 commit on main (`git log --oneline`)
-Next action: WP-03.2
+Next action: WP-03.3
 
 ## CURRENT POSITION
 
 Stage: READY
 Phase: PHASE-03 Database and core services
-Task ID: WP-03.2
+Task ID: WP-03.3
 Task status: NOT_STARTED
 Branch: main (pushed to origin 2026-11-11, owner approved; later pushes still need approval; WP-02.1..02.5 commits are local only)
-Last completed work unit: WP-03.1 (Sonnet 5.5, 2026-11-11)
+Last completed work unit: WP-03.2 (Sonnet 5.5, 2026-11-11)
 
 ## PHASE TRACKER
 
@@ -30,7 +30,7 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | 00 | Governance and discovery | COMPLETE | Opus part done; Sonnet WPs 4/4 (2026-11-11) |
 | 01 | Architecture and contracts | COMPLETE | Baseline v1.0 (WP-01.R / 01.X run on demand) |
 | 02 | Application foundation | COMPLETE | 5/5 (gate passed 2026-11-11) |
-| 03 | Database and core services | IN_PROGRESS | 1/6 |
+| 03 | Database and core services | IN_PROGRESS | 2/6 |
 | 04 | Authentication and permissions | NOT_STARTED | 0/6 |
 | 05 | Tally connector read | NOT_STARTED | 0/9 |
 | 06 | Meat trading and inventory | NOT_STARTED | 0/6 |
@@ -59,15 +59,16 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | WP-02.4 | deploy/compose.dev.yml (postgres:16.10, loopback only, healthcheck), db-init roles (tradex_owner DDL, tradex_app DML only), .env.example x2, api test:integration + root passthrough, CI workflow (verify + gitleaks), README commands | compose db healthy; tradex_app connects, DML ok, DDL denied; integration script exits 0 (empty suite); CI YAML parses but NOT validated with actionlint | WP-02.4 commit |
 | WP-02.5 | Phase 02 gate: install, lint, typecheck, test, integration, build, e2e, audit all executed; QUALITY_GATES §1 DB rows VERIFIED | domain 57, contracts 34, api 19, web 20 pass; e2e 1 pass; audit clean | WP-02.5 commit |
 | WP-03.1 | Kysely/pg DB layer; migration runner (checksum, advisory lock, per-migration tx); `0001_core.sql` (shared trigger functions, division, app_setting, number_sequence, audit_log, job, owner_approval, notification); `db:migrate`, `db:codegen`, committed generated types; `/health` runs SELECT 1 (503 on failure); CI role/DB init | integration 29 pass; `db:migrate` twice (apply, no-op); unit api 20; lint, typecheck, build clean | WP-03.1 commit |
+| WP-03.2 | Core services under `apps/api/src/modules/core` (audit with shallow diff + ambient actor context, numbers `PREFIX-FY-#####` gap-free, settings with Zod schemas + optimistic version + audit, jobs.enqueue, notifications create/list/countUnread/markRead) and `apps/api/src/jobs` (registry + `JobWorker`: 2 s poll, `FOR UPDATE SKIP LOCKED`, exponential backoff, DEAD at max_attempts, lock-expiry reclaim, graceful stop) | integration 75 pass (46 new: audit 5, numbers 6 incl. 12-way parallel, settings 8, notifications 5, jobs 4, worker 14 incl. two workers 40 jobs); unit api 42; lint, typecheck, build, prettier clean | WP-03.2 commit |
 
 ## ACTIVE TASK
 
-Objective: Phase 03 - core services on the WP-03.1 schema (WP-03.2 next).
+Objective: Phase 03 - attachments (WP-03.3 next).
 Assigned agent: Sonnet 5.5
-Required prompt: prompts/phases/PHASE-03-DATABASE-CORE-SERVICES.md -> WP-03.2
-Required context files: per the WP-03.2 Context list
-Allowed modifications: per WP-03.2 Modify list
-Acceptance criteria: per WP-03.2
+Required prompt: prompts/phases/PHASE-03-DATABASE-CORE-SERVICES.md -> WP-03.3
+Required context files: per the WP-03.3 Context list
+Allowed modifications: per WP-03.3 Modify list
+Acceptance criteria: per WP-03.3
 
 ## OPEN BLOCKERS
 
@@ -84,9 +85,11 @@ Acceptance criteria: per WP-03.2
 
 ## QUALITY GATE
 
-Executed 2026-11-11 (WP-03.1 unit gate; Phase 02 gate WP-02.5 below it):
-- Lint: pass � Typecheck: pass � Unit: pass (domain 57, contracts 34, api 20, web 20) � Integration: 29 pass (migrations twice, audit append-only, triggers, sync_seq, /health) � Build: pass � `db:migrate`: pass (apply, then no-op)
-- E2E and audit not re-run for WP-03.1
+Executed 2026-11-11 (WP-03.2 gate; earlier gates below it):
+- Lint: pass; Typecheck: pass; Prettier: pass; Unit: pass (domain 57, contracts 34, api 42, web 20); Integration: 75 pass (3 consecutive runs, no flake after one test-clock fix); Build: pass; `db:migrate`: no pending
+- E2E and audit not re-run for WP-03.2; no new migration in WP-03.2
+
+WP-03.1 gate: integration 29 pass; unit api 20; lint, typecheck, build clean; `db:migrate` applied then no-op.
 
 Phase 02 gate (WP-02.5):
 - Install frozen: pass · Lint: pass · Typecheck: pass · Unit: pass (domain 57, contracts 34, api 19, web 20) · E2E: 1 pass (installed Chrome)
@@ -95,11 +98,11 @@ Phase 02 gate (WP-02.5):
 
 ## NEXT EXACT ACTION
 
-Task ID: WP-03.2
+Task ID: WP-03.3
 Phase prompt: prompts/phases/PHASE-03-DATABASE-CORE-SERVICES.md
 Model: Sonnet 5.5
-Precondition: dev DB up (`docker compose -f deploy/compose.dev.yml up -d db`); copy `apps/api/.env.example` to `apps/api/.env` if missing (git-ignored; integration config loads it)
-Objective: core services (audit, numbering, settings, jobs, notifications), see WP-03.2 heading
-Files to read: the WP-03.2 Context list only (INTERFACES.md section 7, DATA_MODEL section 1)
-Notes from 03.1: services use `app.db` (Kysely, `src/db`) and tables from `0001_core.sql`; audit_log.entity_id is text; job/notification ids are UUIDv7 supplied by the service (no DB default); number_sequence has no version column. Test helpers: `apps/api/test/db.ts` (resetDatabase, truncateAll, testDbUrls). Integration tests go in `src/**/*.integration.test.ts`.
-After this: WP-03.3
+Precondition: dev DB up (`docker compose -f deploy/compose.dev.yml up -d db`); `apps/api/.env` present (git-ignored). New deps likely: `@fastify/multipart`, `sharp` (check `pnpm audit --prod` after install).
+Objective: attachments (storage adapter, upload/download routes, dedupe, link), migration `0002_attachments.sql`
+Files to read: the WP-03.3 Context list only (SECURITY.md section 5; DATA_MODEL section 1 attachment tables; INTERFACES section 2 core rows)
+Notes from 03.2: services live in `apps/api/src/modules/core/{audit,numbers,settings,jobs,notifications}.ts`, exported as `core` from `modules/core/index.ts`; they take a Kysely `Tx` and write audit in the same transaction. Actor context is ambient (`runWithContext`/`getContext` in `core/context.ts`) or passed as `ctx`; the Phase 04 auth plugin must wrap requests in `runWithContext`. Pass jsonb params through `JSON.stringify` (node-postgres turns JS arrays into PG arrays). Notifications and jobs are system plumbing and are not audited. `JobWorker` is not started by `server.ts` yet (no handlers exist); wire it when the first handler lands. No HTTP routes for core yet (`/notifications` waits for the auth seam, WP-04.3). Integration tests: Node and container clocks can differ by 100+ ms, so use offsets of seconds when mixing JS dates with DB `now()`.
+After this: WP-03.4
