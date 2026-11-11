@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"],
+    "paths": {
+      "@tradex/contracts": ["../../packages/contracts/src/index.ts"],
+      "@tradex/domain": ["../../packages/domain/src/index.ts"]
+    }
+  },
+  "include": ["src", "vitest.config.ts"]
+}

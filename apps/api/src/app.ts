@@ -1,0 +1,38 @@
+import Fastify, { type FastifyInstance } from 'fastify';
+import type { Writable } from 'node:stream';
+import type { AppConfig } from './config.js';
+import { loggerOptions } from './logger.js';
+import { registerErrorHandling } from './plugins/errorHandler.js';
+import { genRequestId, registerRequestId } from './plugins/requestId.js';
+import { registerSecurityHeaders } from './plugins/securityHeaders.js';
+
+/** Default request body limit (1 MB). Upload routes override later (SECURITY §5). */
+export const BODY_LIMIT_BYTES = 1_048_576;
+
+export interface BuildAppOptions {
+  /** Test hook: capture log output. */
+  logStream?: Writable;
+}
+
+/** App factory. No listening here, so tests use `app.inject`. */
+export function buildApp(config: AppConfig, options: BuildAppOptions = {}): FastifyInstance {
+  const app = Fastify({
+    logger: {
+      ...loggerOptions(config.LOG_LEVEL),
+      ...(options.logStream ? { stream: options.logStream } : {}),
+    },
+    bodyLimit: BODY_LIMIT_BYTES,
+    requestIdHeader: false,
+    genReqId: (req) => genRequestId(req.headers['x-request-id']),
+    forceCloseConnections: true,
+  });
+
+  registerRequestId(app);
+  registerSecurityHeaders(app);
+  registerErrorHandling(app);
+
+  // Liveness only. The DB check is added in WP-03.1.
+  app.get('/health', () => ({ status: 'ok' }));
+
+  return app;
+}
