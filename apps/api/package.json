@@ -9,17 +9,23 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "test:integration": "vitest run --config vitest.integration.config.ts"
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "db:migrate": "tsx --env-file-if-exists=.env src/db/migrate-cli.ts",
+    "db:codegen": "kysely-codegen --env-file=.env \"--url=env(DATABASE_URL_MIGRATE)\" --dialect=postgres --out-file=src/db/generated.ts"
   },
   "dependencies": {
     "@tradex/contracts": "workspace:*",
     "@tradex/domain": "workspace:*",
     "fastify": "^5.12.8",
+    "kysely": "^0.29.8",
+    "pg": "^8.23.1",
     "pino": "^10.4.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
+    "@types/pg": "^8.23.1",
+    "kysely-codegen": "^0.20.0",
     "tsx": "^4.23.15"
   }
 }

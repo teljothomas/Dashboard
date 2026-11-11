@@ -4,7 +4,13 @@ import { defineConfig } from 'vitest/config';
 const src = (p: string): string => fileURLToPath(new URL(p, import.meta.url));
 
 // Integration tests need the test DB: `docker compose -f deploy/compose.dev.yml up -d db`
-// and DATABASE_URL_TEST (see apps/api/.env.example). The suite is empty until WP-03.1.
+// plus DATABASE_URL_TEST and DATABASE_URL_TEST_MIGRATE (see apps/api/.env.example).
+// Values already in the environment win over apps/api/.env (CI sets them directly).
+try {
+  process.loadEnvFile(fileURLToPath(new URL('.env', import.meta.url)));
+} catch {
+  // no .env file: rely on the process environment
+}
 export default defineConfig({
   resolve: {
     alias: {

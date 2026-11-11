@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { Writable } from 'node:stream';
 import type { AppConfig } from './config.js';
+import { createDatabase, isDatabaseHealthy, type Database } from './db/index.js';
 import { loggerOptions } from './logger.js';
 import { registerErrorHandling } from './plugins/errorHandler.js';
 import { genRequestId, registerRequestId } from './plugins/requestId.js';
@@ -12,6 +13,14 @@ export const BODY_LIMIT_BYTES = 1_048_576;
 export interface BuildAppOptions {
   /** Test hook: capture log output. */
   logStream?: Writable;
+  /** Test hook: use this database instead of creating one from `config.DATABASE_URL`. */
+  db?: Database;
+}
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    db: Database;
+  }
 }
 
 /** App factory. No listening here, so tests use `app.inject`. */
@@ -31,8 +40,22 @@ export function buildApp(config: AppConfig, options: BuildAppOptions = {}): Fast
   registerSecurityHeaders(app);
   registerErrorHandling(app);
 
-  // Liveness only. The DB check is added in WP-03.1.
-  app.get('/health', () => ({ status: 'ok' }));
+  // The pool connects lazily, so building the app never needs a reachable database.
+  const db = options.db ?? createDatabase(config.DATABASE_URL);
+  app.decorate('db', db);
+  if (!options.db) {
+    app.addHook('onClose', async () => {
+      await db.destroy();
+    });
+  }
+
+  // Runs SELECT 1; reports status only (no version or host details, SECURITY).
+  app.get('/health', async (_request, reply) => {
+    if (await isDatabaseHealthy(db)) {
+      return { status: 'ok' };
+    }
+    return reply.code(503).send({ status: 'error' });
+  });
 
   return app;
 }

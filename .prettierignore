@@ -11,3 +11,4 @@ prompts
 tools
 *.md
 .claude
+apps/api/src/db/generated.ts

@@ -7,11 +7,12 @@ import { buildApp, BODY_LIMIT_BYTES } from './app.js';
 import { AppError } from './errors.js';
 import { SECURITY_HEADERS } from './plugins/securityHeaders.js';
 import { testConfig } from './test-config.js';
+import { createDummyDatabase, createFailingDatabase } from '../test/dummyDb.js';
 
 let app: FastifyInstance | undefined;
 
 function makeApp(): FastifyInstance {
-  const instance = buildApp(testConfig);
+  const instance = buildApp(testConfig, { db: createDummyDatabase() });
   instance.get('/_test/app-error', () => {
     throw new AppError('CONFLICT_VERSION', 'Version mismatch', { server: { version: 7 } });
   });
@@ -36,6 +37,17 @@ describe('GET /health', () => {
     const res = await makeApp().inject({ method: 'GET', url: '/health' });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ status: 'ok' });
+  });
+});
+
+describe('GET /health when the database is down', () => {
+  it('returns 503 {status:"error"} with no details', async () => {
+    const instance = buildApp(testConfig, { db: createFailingDatabase() });
+    app = instance;
+    const res = await instance.inject({ method: 'GET', url: '/health' });
+    expect(res.statusCode).toBe(503);
+    expect(res.json()).toEqual({ status: 'error' });
+    expect(res.body).not.toContain('refused');
   });
 });
 

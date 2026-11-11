@@ -22,6 +22,8 @@ pnpm lint && pnpm typecheck                             # static checks
 pnpm test                                               # unit tests, all packages
 pnpm --filter api test <pattern>                        # unit tests, one package, filtered
 pnpm test:integration                                   # API integration tests (needs the dev DB up)
+pnpm --filter api db:migrate                            # apply migrations (tradex_owner, DATABASE_URL_MIGRATE)
+pnpm --filter api db:codegen                            # regenerate src/db/generated.ts from the migrated DB
 pnpm build                                              # build all packages
 pnpm --filter web e2e                                   # Playwright smoke (uses installed Chrome locally)
 ```
