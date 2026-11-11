@@ -17,7 +17,7 @@ Next action: WP-02.1
 Stage: READY_FOR_SONNET_IMPLEMENTATION
 Phase: PHASE-00 Governance, discovery and project readiness
 Task ID: WP-02.1
-Task status: READY
+Task status: IN_PROGRESS (WP-02.1 started 2026-11-11)
 Branch: main (pushed to origin 2026-11-11, owner approved; later pushes still need approval)
 Last completed work unit: WP-00.4 (toolchain record + Phase 00 gate, Sonnet 5.5)
 
