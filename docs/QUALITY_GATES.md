@@ -16,13 +16,13 @@ CI workflow `.github/workflows/ci.yml`: YAML parses, `docker compose config` ok 
 | Install | `pnpm install --frozen-lockfile` | VERIFIED 2026-11-11 |
 | Lint | `pnpm lint` | VERIFIED 2026-11-11 (confirmed it fails on an injected `any`) |
 | Typecheck | `pnpm typecheck` | VERIFIED 2026-11-11 |
-| Unit tests (all) | `pnpm test` | VERIFIED 2026-11-11 (domain 57, contracts 34, api 19, web 20; 0 fail) |
+| Unit tests (all) | `pnpm test` | VERIFIED 2026-11-11 (Phase 03 gate: domain 57, contracts 40, api 69, web 105; 0 fail) |
 | Unit tests (one package) | `pnpm --filter <api|web|contracts|domain> test <pattern>` | VERIFIED 2026-11-11. Corrected: with pnpm 12.8.1 the `--` before the pattern is forwarded to vitest and the pattern is ignored (all files ran); omit it |
-| API integration tests (needs test DB) | `pnpm --filter api test:integration` | VERIFIED 2026-11-11 (root `pnpm test:integration` passes through; suite is empty until WP-03.1, exits 0 with "No test files found"; reads `DATABASE_URL_TEST`) |
+| API integration tests (needs test DB) | `pnpm --filter api test:integration` | VERIFIED 2026-11-11 (Phase 03 gate: 150 pass, run twice; root `pnpm test:integration` passes through; reads `DATABASE_URL_TEST`) |
 | Start test DB | `docker compose -f deploy/compose.dev.yml up -d db` | VERIFIED 2026-11-11 (postgres:16.10, healthy, bound 127.0.0.1:5432 only; DBs tradex_dev + tradex_test; `tradex_app` connects, DML works, DDL and DROP denied; `tradex_owner` DDL works) |
-| Migrations | `pnpm --filter api db:migrate` | PLANNED (Phase 03) |
+| Migrations | `pnpm --filter api db:migrate` | VERIFIED 2026-11-11 (empty database: applies 0001, 0002, 0003; second run reports no pending; runs as `tradex_owner` via `DATABASE_URL_MIGRATE`) |
 | E2E | `pnpm --filter web e2e` | VERIFIED 2026-11-11 (builds, then Playwright on `vite preview`; local run uses installed Chrome, CI uses Chromium) |
-| Build | `pnpm build` | VERIFIED 2026-11-11 (web initial JS 144.62 KB gzip) |
+| Build | `pnpm build` | VERIFIED 2026-11-11 (Phase 03 gate: web initial JS 147.48 KB gzip) |
 | Dependency audit | `pnpm audit --prod` | VERIFIED 2026-11-11 (no known vulnerabilities) |
 | Secret scan | `gitleaks detect --no-banner` | NOT VERIFIED locally: gitleaks not installed on dev PC. CI job `secret-scan` (gitleaks-action) is defined in `.github/workflows/ci.yml` but has not run (no remote run yet) |
 | Agent build/test | `dotnet build agent/TradeX.TallyAgent.sln` / `dotnet test agent/TradeX.TallyAgent.sln` | PLANNED (requires .NET 10 SDK; not installed on dev PC as of 2026-11-11) |

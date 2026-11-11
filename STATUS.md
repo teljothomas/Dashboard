@@ -4,22 +4,22 @@ Project: Meat Trading, Processing & Logistics ERP (working name: TradeX ERP)
 Current release: none
 Project state: FOUNDATION_IN_PROGRESS
 Application coding: STARTED (Phase 02 foundation packages and apps exist)
-Current stage: READY (WP-03.5 complete; WP-03.6 next)
-Current phase: PHASE-03 (5/6)
-Current task: WP-03.6
+Current stage: READY (Phase 03 gate passed; WP-04.1 next)
+Current phase: PHASE-04 (0/6)
+Current task: WP-04.1
 Assigned model: Sonnet 5.5
 Last updated: 2026-11-11
-Last verified commit: WP-02.3 commit on main (`git log --oneline`)
-Next action: WP-03.6
+Last verified commit: WP-03.6 gate commit on main (`git log --oneline`)
+Next action: WP-04.1
 
 ## CURRENT POSITION
 
 Stage: READY
-Phase: PHASE-03 Database and core services
-Task ID: WP-03.6
+Phase: PHASE-04 Authentication and permissions
+Task ID: WP-04.1
 Task status: NOT_STARTED
-Branch: main (pushed to origin 2026-11-11, owner approved; later pushes still need approval; WP-02.1..02.5 commits are local only)
-Last completed work unit: WP-03.5 (Sonnet 5.5, 2026-11-11)
+Branch: main (pushed to origin 2026-11-11, owner approved; later pushes still need approval, so Phase 03 commits after that push are local only)
+Last completed work unit: WP-03.6 Phase 03 gate (Sonnet 5.5, 2026-11-11)
 
 ## PHASE TRACKER
 
@@ -30,7 +30,7 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | 00 | Governance and discovery | COMPLETE | Opus part done; Sonnet WPs 4/4 (2026-11-11) |
 | 01 | Architecture and contracts | COMPLETE | Baseline v1.0 (WP-01.R / 01.X run on demand) |
 | 02 | Application foundation | COMPLETE | 5/5 (gate passed 2026-11-11) |
-| 03 | Database and core services | IN_PROGRESS | 5/6 |
+| 03 | Database and core services | COMPLETE | 6/6 (gate passed 2026-11-11) |
 | 04 | Authentication and permissions | NOT_STARTED | 0/6 |
 | 05 | Tally connector read | NOT_STARTED | 0/9 |
 | 06 | Meat trading and inventory | NOT_STARTED | 0/6 |
@@ -63,19 +63,21 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | WP-03.3 | Attachments: migration `0002_attachments.sql` (attachment, attachment_link), `LocalFsStorage` (sha256-sharded, temp+rename, key pattern guard), upload validation (magic bytes JPEG/PNG/WebP/PDF, sharp re-encode strips EXIF/GPS and applies orientation, PDF structure + active-content check), `POST /api/v1/attachments` (10 MB, 1 file, sha256 dedupe: 201 new / 200 existing, audit), `GET /api/v1/attachments/:id` (nosniff, attachment disposition for PDF, access resolvers, unlinked = uploader only, 404 for every denial), `core.attachments.link` + `registerAccessResolver`; `requestContext` auth seam (`request.ctx`, `requireContext`, 401 without a provider) | integration 107 pass x4 runs (32 new attachments); unit api 56 (14 new); lint, typecheck, prettier, build clean; `pnpm audit --prod` clean | WP-03.3 commit |
 | WP-03.4 | Device sync server: migration `0003_sync.sql` (client_mutation, sync_conflict), `packages/contracts/src/sync.ts`, `modules/sync` (registerEntity registry, `POST /sync/push` per-mutation tx with idempotent replay, IDEMPOTENCY_MISMATCH, BLOCKED_BY_PREVIOUS, RECORD_LOCKED incl. TX423 mapping, audit; `classifyStaleUpdate`; `GET /sync/pull` merged sync_seq order + cursor + hasMore with exclusive pull lock; `GET /sync/conflicts`, `POST /sync/conflicts/:id/resolve` KEEP_SERVER/APPLY_CLIENT/MERGED) | integration 150 pass x2 (43 new sync); unit api 69 (12 new), contracts 40; lint, typecheck, prettier, build clean; `pnpm audit --prod` clean | WP-03.4 commit |
 | WP-03.5 | Client offline core in `apps/web/src/offline`: Dexie schema v1 per OFFLINE_DESIGN 3 + device id bootstrap, outbox (enqueue in one tx with the local record, FIFO, one entry per record per batch, delete only on APPLIED), sync engine (single flight with Web Locks, push 50 then pull mine/reference, backoff 5 s to 10 min, 401 pause/resume, storage warning), BR-301 `deriveSyncStatus`, `useOfflineMutation`, `SyncStatusChip`, banner paused/low-storage | web 102 pass (82 new), domain 57, contracts 40, api 69; lint, typecheck, prettier, build clean (initial JS 147.48 KB gzip); e2e 1 pass; audit clean | WP-03.5 commit |
+| WP-03.5 follow-ups | Security review: (1) session user change mid-run stops the sync run (`session-changed`), checked before each push send and after each pull response; (2) offline records, serverShadow, reference rows and pull cursors keyed per user, outbox filtered by userId, schema v1 edited in place (nothing shipped) | web 105 pass; lint, typecheck, prettier clean | 74a8cd8, 77154dd |
+| WP-03.6 | Phase 03 gate: full suite, migrations on an empty DB (0001..0003 apply, second run no-op), build, e2e, audit; QUALITY_GATES `db:migrate` and `test:integration` VERIFIED | domain 57, contracts 40, api 69, web 105; integration 150 (x2); e2e 1; build 147.48 KB gzip; audit clean | WP-03.6 commit |
 
 ## ACTIVE TASK
 
-Objective: Phase 03 gate (WP-03.6 next).
+Objective: WP-04.1 identity schema, seeds, owner bootstrap.
 Assigned agent: Sonnet 5.5
-Required prompt: prompts/phases/PHASE-03-DATABASE-CORE-SERVICES.md -> WP-03.6
-Required context files: per the WP-03.6 text
-Allowed modifications: docs/QUALITY_GATES.md, STATUS.md, docs/TASK_LOG.md
-Acceptance criteria: per WP-03.6
+Required prompt: prompts/phases/PHASE-04-AUTHENTICATION-PERMISSIONS.md -> WP-04.1
+Required context files: DATA_MODEL §2; INTERFACES §3
+Allowed modifications: migration `0004_identity.sql`, `apps/api/src/modules/identity/**`, `apps/api/src/cli/create-owner.ts`, api package script `user:create-owner`
+Acceptance criteria: per WP-04.1
 
 ## OPEN BLOCKERS
 
-- Owner/Opus decision (not blocking WP-03.4): attachment dedupe is global by sha256 per DATA_MODEL section 1, so a second user uploading identical bytes gets the first user's id, and `core.attachments.link` does not check who is linking (security review finding, medium). Recommended: per-uploader rows sharing one blob (`UNIQUE (sha256, uploaded_by)`, DATA_MODEL change) and `link` checking uploader or `canRead`. Decide before WP-03.6 gate; `link` actor check can also land with WP-04.3. PDF active-content scan is best effort (object streams can hide markers); real controls are attachment disposition and nosniff.
+- Owner decision, CARRIED INTO PHASE 04 (can land with WP-04.3; not blocking WP-04.1/04.2): attachment dedupe is global by sha256 per DATA_MODEL section 1, so a second user uploading identical bytes gets the first user's id, and `core.attachments.link` does not check who is linking (security review finding, medium). Recommended: per-uploader rows sharing one blob (`UNIQUE (sha256, uploaded_by)`, DATA_MODEL change) and `link` checking uploader or `canRead`. PDF active-content scan is best effort (object streams can hide markers); real controls are attachment disposition and nosniff.
 - None for Phase 03. Not blocking: gitleaks and actionlint not installed on the dev PC (secret scan runs in CI; `.github/workflows/ci.yml` is NOT validated with actionlint and has never run on GitHub). .NET SDK absent (blocks WP-05.0).
 
 ## OWNER APPROVAL REQUIRED
@@ -88,6 +90,11 @@ Acceptance criteria: per WP-03.6
 - Later protected operations: VPS purchase/domain (Phase 14), production deploy, live data import, production posting enable (Phase 15).
 
 ## QUALITY GATE
+
+Phase 03 gate (WP-03.6, executed 2026-11-11):
+- Lint: pass; Typecheck: pass (4 packages); Prettier: pass; Unit: pass (domain 57, contracts 40, api 69, web 105); Integration: 150 pass (2 runs); `db:migrate` on empty DB: applied 0001, 0002, 0003, then no pending; Build: pass (web initial JS 147.48 KB gzip); E2E: 1 pass; `pnpm audit --prod`: no known vulnerabilities
+- Not run: security suite, backup/restore, secret scan (gitleaks not installed; CI job never run), CI YAML validation (no actionlint)
+- Carried into Phase 04: attachment dedupe by sha256 and `core.attachments.link` actor check (owner decision)
 
 Executed 2026-11-11 (WP-03.5 gate):
 - Lint: pass; Typecheck: pass (all 4 packages); Prettier: pass; Unit: pass (domain 57, contracts 40, api 69, web 102); Build: pass (web initial JS 147.48 KB gzip); E2E: 1 pass; `pnpm audit --prod`: no known vulnerabilities
@@ -114,10 +121,13 @@ Phase 02 gate (WP-02.5):
 
 ## NEXT EXACT ACTION
 
-Task ID: WP-03.6
-Phase prompt: prompts/phases/PHASE-03-DATABASE-CORE-SERVICES.md
-Model: Sonnet 5.5
-Objective: Phase 03 gate. Run the full suite plus migrations on an empty DB plus build; update QUALITY_GATES (`db:migrate`, `test:integration` VERIFIED); next action WP-04.1; commit.
-Decide first (OPEN BLOCKERS): attachment dedupe and `core.attachments.link` actor check (owner/Opus). If undecided, record it as carried into Phase 04 in the gate result.
+Task ID: WP-04.1
+Phase prompt: prompts/phases/PHASE-04-AUTHENTICATION-PERMISSIONS.md
+Model: Sonnet 5.5 (permission seed transcription from INTERFACES §3 is Haiku-eligible)
+Context: DATA_MODEL §2; INTERFACES §3
+Objective: Identity schema, seeds, owner bootstrap. Migration `0004_identity.sql` (app_user, role, permission, role_permission, user_role, session, password_reset, device, login_attempt; FK client_mutation.device_id to device), idempotent seed of the permission catalogue and six system roles, CLI `user:create-owner`.
+Expected output: migration, `modules/identity/**`, `cli/create-owner.ts`, package script `user:create-owner`.
+Tests: migration + seed idempotent (integration); CLI creates owner in test DB (password via stdin in test mode only); lint, typecheck, prettier.
+Carried blocker: attachment dedupe by sha256 and `core.attachments.link` actor check land in Phase 04 (with WP-04.3).
 Notes from 03.5: `startOfflineRuntime()` (offline/runtime.ts) is not called from `main.tsx` yet; Phase 04 must set `sessionStore.userId` on login and call `engine.resume()` after a 401 re-login. A persistent DUPLICATE_SUSPECTED keeps its outbox entry PENDING with `lastError` set and is resent every run (no UI yet). Attachment upload step in the engine is a placeholder (entries with `dependsOn` wait). Conflict screen, Settings sync page and JSON export of pending items are not built (Phase 12 hardening). Pull `data` is read as `{ version, status, number, syncStatus }` (see `readServerFields`); entity handlers must serialize those fields.
-After this: WP-04.1
+After this: WP-04.2
