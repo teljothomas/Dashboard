@@ -35,6 +35,15 @@ describe('SlidingWindowLimiter', () => {
     expect(limiter.consume('a')).toBe(0);
   });
 
+  it('refund gives back the latest hit', () => {
+    const limiter = new SlidingWindowLimiter(1, 60_000, () => 0);
+    expect(limiter.consume('a')).toBe(0);
+    expect(limiter.consume('a')).toBeGreaterThan(0);
+    limiter.refund('a');
+    expect(limiter.consume('a')).toBe(0);
+    limiter.refund('missing');
+  });
+
   it('peek never records', () => {
     const limiter = new SlidingWindowLimiter(1, 60_000, () => 0);
     expect(limiter.peek('a')).toBe(0);

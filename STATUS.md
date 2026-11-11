@@ -66,7 +66,7 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | WP-03.5 follow-ups | Security review: (1) session user change mid-run stops the sync run (`session-changed`), checked before each push send and after each pull response; (2) offline records, serverShadow, reference rows and pull cursors keyed per user, outbox filtered by userId, schema v1 edited in place (nothing shipped) | web 105 pass; lint, typecheck, prettier clean | 74a8cd8, 77154dd |
 | WP-03.6 | Phase 03 gate: full suite, migrations on an empty DB (0001..0003 apply, second run no-op), build, e2e, audit; QUALITY_GATES `db:migrate` and `test:integration` VERIFIED | domain 57, contracts 40, api 69, web 105; integration 150 (x2); e2e 1; build 147.48 KB gzip; audit clean | WP-03.6 commit |
 | WP-04.1 | Identity: migration `0004_identity.sql` (app_user, role, permission, role_permission, user_role, device, session, password_reset, login_attempt; FKs client_mutation.device_id and sync_conflict.device_id to device), `modules/identity` (42-permission catalogue, six system roles, default matrix, insert-only idempotent `seedIdentity`, argon2id password module with policy, `createOwner`), CLI `user:create-owner` (hidden input; stdin only when NODE_ENV=test) | unit api 81 (12 new); integration 167 (17 new, incl. CLI subprocess); lint, typecheck, prettier, build clean; audit clean | WP-04.1 commit |
-| WP-04.2 | Auth: `POST /auth/login`, `/auth/logout`, `GET /auth/me`, `POST /auth/change-password`; session plugin sets `request.ctx` (roles, grants, deviceId, csrfToken), HMAC double-submit CSRF, DB-derived lockout (5/user, 20/IP per 15 min) + in-memory request limiter, device auto-registration, must-change-password gate, contracts `identity.ts` | unit api 90 (9 new), contracts 40, web 105; integration 196 (29 new), 5 clean full runs (1 earlier unidentified failure, not reproduced); lint, typecheck, prettier, build clean; audit clean | WP-04.2 commit |
+| WP-04.2 | Auth: `POST /auth/login`, `/auth/logout`, `GET /auth/me`, `POST /auth/change-password`; session plugin sets `request.ctx` (roles, grants, deviceId, csrfToken), HMAC double-submit CSRF, DB-derived lockout (5/user, 20/IP per 15 min) + in-memory request limiter, device auto-registration, must-change-password gate, contracts `identity.ts` | unit api 91 (10 new), contracts 40, web 105; integration 199 (32 new; 3 review fixes), clean runs (1 earlier unidentified failure, not reproduced); lint, typecheck, prettier, build clean; audit clean | WP-04.2 commit |
 
 ## ACTIVE TASK
 
@@ -94,7 +94,7 @@ Acceptance criteria: per WP-04.3
 ## QUALITY GATE
 
 WP-04.2 (executed 2026-11-11):
-- Lint: pass; Typecheck: pass (4 packages); Prettier: pass; Unit: pass (api 90, 9 new; contracts 40; web 105); Integration: 196 pass (29 new), 5 consecutive full runs clean after one earlier full run with 1 unidentified failure; Build: pass; `pnpm audit --prod`: no known vulnerabilities
+- Lint: pass; Typecheck: pass (4 packages); Prettier: pass; Unit: pass (api 91, 10 new; contracts 40; web 105); Integration: 199 pass (32 new, after security-review fixes; earlier build 196 x5), 5 consecutive full runs clean after one earlier full run with 1 unidentified failure; Build: pass; `pnpm audit --prod`: no known vulnerabilities
 - Not run: e2e (web untouched), security suite, secret scan, `db:migrate` (no migration)
 
 WP-04.1 (executed 2026-11-11):

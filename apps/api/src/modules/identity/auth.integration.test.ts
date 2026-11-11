@@ -501,20 +501,35 @@ describe('sessions', () => {
     expect(disabled.statusCode).toBe(401);
   });
 
-  it('registers a new device on its first authenticated request', async () => {
+  it('refuses an X-Device-Id other than the one the session is bound to', async () => {
     const instance = makeApp();
     const session = await loginOk(instance);
-    const second = uuidv7();
+    const other = uuidv7();
     const res = await instance.inject({
       method: 'GET',
       url: `${API}/auth/me`,
-      headers: { cookie: session.cookie, 'x-device-id': second },
+      headers: { cookie: session.cookie, 'x-device-id': other },
     });
-    expect(res.statusCode).toBe(200);
-    const row = await one<{ user_id: string }>(`SELECT user_id FROM device WHERE id = $1`, [
-      second,
-    ]);
-    expect(row.user_id).toBe(userId);
+    expect(res.statusCode).toBe(401);
+    const row = await owner.query(`SELECT 1 FROM device WHERE id = $1`, [other]);
+    expect(row.rowCount).toBe(0);
+  });
+
+  it('cannot dodge a revoked device by sending another X-Device-Id', async () => {
+    const instance = makeApp();
+    const session = await loginOk(instance);
+    await owner.query(`UPDATE device SET revoked_at = now() WHERE id = $1`, [session.deviceId]);
+    for (const headers of [
+      { cookie: session.cookie },
+      { cookie: session.cookie, 'x-device-id': uuidv7() },
+      { cookie: session.cookie, 'x-device-id': session.deviceId },
+    ]) {
+      const res = await instance.inject({ method: 'GET', url: `${API}/auth/me`, headers });
+      expect(res.statusCode).toBe(401);
+    }
+    // A revoked device also cannot log in again.
+    const again = await rawLogin(instance, PASSWORD, USERNAME, session.deviceId);
+    expect(again.statusCode).toBe(401);
   });
 
   it('ignores a malformed X-Device-Id and falls back to the session device', async () => {
@@ -669,6 +684,38 @@ describe('POST /auth/change-password', () => {
     expect(limited.headers['retry-after']).toBeDefined();
   });
 
+  it('does not let parallel wrong current passwords slip past the limit', async () => {
+    const instance = makeApp();
+    const session = await loginOk(instance);
+    const results = await Promise.all(
+      Array.from({ length: 8 }, () =>
+        instance.inject({
+          method: 'POST',
+          url: `${API}/auth/change-password`,
+          headers: authed(session),
+          payload: { currentPassword: 'not-the-password', newPassword: NEW_PASSWORD },
+        }),
+      ),
+    );
+    const codes = results.map((r) => r.statusCode);
+    expect(codes.filter((c) => c === 400)).toHaveLength(5);
+    expect(codes.filter((c) => c === 429)).toHaveLength(3);
+  });
+
+  it('does not count policy rejections against the wrong-password limit', async () => {
+    const instance = makeApp();
+    const session = await loginOk(instance);
+    for (let i = 0; i < 7; i += 1) {
+      const res = await instance.inject({
+        method: 'POST',
+        url: `${API}/auth/change-password`,
+        headers: authed(session),
+        payload: { currentPassword: PASSWORD, newPassword: 'short' },
+      });
+      expect(res.statusCode).toBe(400);
+    }
+  });
+
   it('confines a must_change_password user to the auth routes until they change it', async () => {
     const instance = makeApp();
     await owner.query(`UPDATE app_user SET must_change_password = true WHERE id = $1`, [userId]);
@@ -681,6 +728,14 @@ describe('POST /auth/change-password', () => {
     });
     expect(blocked.statusCode).toBe(403);
     expect(blocked.json<Body>().error.details.reason).toBe('PASSWORD_CHANGE_REQUIRED');
+    // The gate follows the matched route, so an encoded path cannot slip past it.
+    const encoded = await instance.inject({
+      method: 'GET',
+      url: '/api/%76%31/sync/pull',
+      headers: authed(session, false),
+    });
+    expect(encoded.statusCode).toBe(403);
+    expect(encoded.json<Body>().error.details.reason).toBe('PASSWORD_CHANGE_REQUIRED');
     const me = await instance.inject({
       method: 'GET',
       url: `${API}/auth/me`,

@@ -52,20 +52,19 @@ export function requestSessionToken(
   return readCookie(request.headers.cookie, sessionCookieName(config));
 }
 
-const API_PREFIX = '/api/v1/';
-/** Routes a user who must change the password may still call. */
+/**
+ * Registered route patterns a user who must change the password may still call. Everything else
+ * that matches a route is denied (default deny), judged by the matched route, never the raw URL:
+ * the router percent-decodes paths, so `/api/%76%31/...` reaches `/api/v1/...`.
+ */
 const PASSWORD_CHANGE_ALLOWED = new Set([
+  '/health',
   '/api/v1/auth/login',
   '/api/v1/auth/reset/complete',
   '/api/v1/auth/me',
   '/api/v1/auth/logout',
   '/api/v1/auth/change-password',
 ]);
-
-function pathOf(url: string): string {
-  const q = url.indexOf('?');
-  return q === -1 ? url : url.slice(0, q);
-}
 
 /**
  * Session plugin: `onRequest` reads the session cookie, resolves it against the database and
@@ -88,12 +87,9 @@ export function registerSession(app: FastifyInstance, config: AppConfig): void {
     );
     if (ctx === null) return;
     request.ctx = ctx;
-    const path = pathOf(request.url);
-    if (
-      ctx.mustChangePassword &&
-      path.startsWith(API_PREFIX) &&
-      !PASSWORD_CHANGE_ALLOWED.has(path)
-    ) {
+    // `routeOptions.url` is undefined when nothing matched (the 404 handler answers).
+    const route = request.routeOptions.url;
+    if (ctx.mustChangePassword && route !== undefined && !PASSWORD_CHANGE_ALLOWED.has(route)) {
       throw new AppError('FORBIDDEN', 'Password change required.', {
         reason: 'PASSWORD_CHANGE_REQUIRED',
       });

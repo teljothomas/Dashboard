@@ -194,7 +194,10 @@ export async function resolveSession(
     .executeTakeFirst();
   if (!row) return null;
 
-  const deviceId = headerDeviceId ?? row.device_id;
+  // The session is bound to the device it was created on. A different X-Device-Id is refused
+  // (never trusted over the bound one), and the bound device is always checked for revocation.
+  const deviceId = row.device_id;
+  if (headerDeviceId !== null && headerDeviceId !== deviceId) return null;
   if (deviceId !== null && !(await ensureDevice(db, deviceId, row.user_id))) return null;
 
   if (row.stale) {

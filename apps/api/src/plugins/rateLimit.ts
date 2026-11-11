@@ -37,6 +37,14 @@ export class SlidingWindowLimiter {
   }
 
   /** Record one hit. Returns seconds to wait when the key is over the limit (hit not recorded), else 0. */
+  /** Give back the most recent hit of `key` (an attempt that turned out not to count). */
+  refund(key: string): void {
+    const kept = this.hits.get(key);
+    if (!kept) return;
+    kept.pop();
+    if (kept.length === 0) this.hits.delete(key);
+  }
+
   consume(key: string): number {
     const at = this.now();
     this.sweep(at);

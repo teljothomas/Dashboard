@@ -73,7 +73,8 @@ export function registerIdentityRoutes(app: FastifyInstance, config: AppConfig):
       api.post('/auth/change-password', async (request, reply) => {
         const ctx = requireContext(request);
         const body = ChangePasswordRequest.parse(request.body);
-        const wait = changePasswordFailures.peek(ctx.userId);
+        // Reserve the attempt before verifying so parallel guesses cannot all pass the check.
+        const wait = changePasswordFailures.consume(ctx.userId);
         if (wait > 0) throw rateLimited(wait);
         try {
           await changePassword(app.db, {
@@ -84,8 +85,11 @@ export function registerIdentityRoutes(app: FastifyInstance, config: AppConfig):
             ctx: actorOf(request, ctx),
           });
         } catch (error) {
-          if (error instanceof AppError && error.details?.reason === 'CURRENT_PASSWORD_INCORRECT') {
-            changePasswordFailures.consume(ctx.userId);
+          // Only a wrong current password counts; policy or server errors give the attempt back.
+          if (!(
+            error instanceof AppError && error.details?.reason === 'CURRENT_PASSWORD_INCORRECT'
+          )) {
+            changePasswordFailures.refund(ctx.userId);
           }
           throw error;
         }
