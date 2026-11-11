@@ -7,7 +7,6 @@ import { clearEntities, getEntity, listEntities, registerEntity } from './regist
 export const sync = { registerEntity, clearEntities, getEntity, listEntities };
 
 export { registerSyncRoutes } from './routes.js';
-export { CONFLICT_APPROVER_PERMISSIONS } from './conflicts.js';
 export { lockSyncWrite } from './locks.js';
 export { canonicalJson, classifyStaleUpdate, mutationHash } from './policy.js';
 export type { StaleInput, StaleKind, StaleResult } from './policy.js';

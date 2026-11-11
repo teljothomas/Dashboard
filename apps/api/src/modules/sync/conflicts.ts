@@ -10,24 +10,29 @@ import { AppError } from '../../errors.js';
 import { audit } from '../core/index.js';
 import type { Tx } from '../core/context.js';
 import { isRecordLockedError, lockEntity, lockSyncWrite } from './locks.js';
-import { getEntity } from './registry.js';
+import { getEntity, listEntities } from './registry.js';
 import type { EntitySummary, SyncCaller } from './types.js';
-
-/**
- * Permissions that make a caller an "approver" for conflict resolution (INTERFACES section 2,
- * sync rows: "owner of record or approver"). The pushing user always owns their own conflicts.
- */
-export const CONFLICT_APPROVER_PERMISSIONS = [
-  'expense.approve',
-  'advance.approve',
-  'wages.approve',
-  'inventory.writeoff.approve',
-] as const;
 
 type ConflictRow = Selectable<DB['sync_conflict']>;
 
-function isApprover(caller: SyncCaller): boolean {
-  return CONFLICT_APPROVER_PERMISSIONS.some((p) => caller.permissions.includes(p));
+/**
+ * "Owner of record or approver" (INTERFACES section 2, sync rows). The pushing user always owns
+ * their own conflicts. An approver is scoped per entity type: each handler declares the one
+ * permission that governs its type (`approverPermission`), so an expense approver cannot see or
+ * resolve advance, attendance or stock conflicts. Types without a declared permission are
+ * owner-only. Division/OWN scoping is added with the identity tables (Phase 04).
+ */
+function canApprove(caller: SyncCaller, entityType: string): boolean {
+  const permission = getEntity(entityType)?.approverPermission;
+  return permission !== undefined && caller.permissions.includes(permission);
+}
+
+/** Entity types the caller may approve conflicts for. */
+function approvableTypes(caller: SyncCaller): string[] {
+  return listEntities()
+    .filter(([, handler]) => handler.approverPermission !== undefined)
+    .filter(([entityType]) => canApprove(caller, entityType))
+    .map(([entityType]) => entityType);
 }
 
 function iso(value: Date | string): string {
@@ -62,7 +67,7 @@ export function toConflictDto(row: ConflictRow): SyncConflictDto {
   };
 }
 
-/** GET /sync/conflicts: own conflicts, or all of them for an approver. Keyset on the uuid v7 id. */
+/** GET /sync/conflicts: own conflicts plus those of types the caller approves. Keyset on the uuid v7 id. */
 export async function listConflicts(
   db: Database,
   caller: SyncCaller,
@@ -73,9 +78,12 @@ export async function listConflicts(
     .selectAll()
     .orderBy('id', 'asc')
     .limit(query.limit + 1);
-  if (!isApprover(caller)) {
-    q = q.where('user_id', '=', caller.userId);
-  }
+  const types = approvableTypes(caller);
+  q = q.where((eb) =>
+    types.length > 0
+      ? eb.or([eb('user_id', '=', caller.userId), eb('entity_type', 'in', types)])
+      : eb('user_id', '=', caller.userId),
+  );
   if (query.status !== 'ALL') {
     q = q.where('status', '=', query.status);
   }
@@ -104,7 +112,7 @@ async function resolveInTx(
     .forUpdate()
     .executeTakeFirst();
   // Not-found for anything the caller may not resolve: no hint that the conflict exists.
-  if (!row || (row.user_id !== caller.userId && !isApprover(caller))) {
+  if (!row || (row.user_id !== caller.userId && !canApprove(caller, row.entity_type))) {
     throw new AppError('NOT_FOUND', 'Conflict not found');
   }
   if (row.status !== 'OPEN') {

@@ -85,6 +85,11 @@ export interface ResolutionInput {
 export interface SyncEntityHandler<TRow = unknown> {
   /** Pull scopes this type participates in. */
   scopes: readonly SyncScope[];
+  /**
+   * Permission that lets a non-owner see and resolve sync conflicts of this type (for example
+   * `expense.approve`). Omitted: only the pushing user can.
+   */
+  approverPermission?: string;
   create?(tx: Tx, caller: SyncCaller, mutation: SyncMutation): Promise<HandlerOutcome>;
   update?(tx: Tx, caller: SyncCaller, mutation: SyncMutation): Promise<HandlerOutcome>;
   submit?(tx: Tx, caller: SyncCaller, mutation: SyncMutation): Promise<HandlerOutcome>;

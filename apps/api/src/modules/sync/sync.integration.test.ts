@@ -185,6 +185,14 @@ describe('push: authentication and framing', () => {
     expect(res.json()).toMatchObject({ error: { code: 'FORBIDDEN' } });
   });
 
+  it('refuses a push from a session that is not bound to a device', async () => {
+    const res = await push([create(uuidv7())], { 'x-test-user': USER });
+    expect(res.statusCode).toBe(403);
+    expect(res.json()).toMatchObject({ error: { code: 'FORBIDDEN' } });
+    expect(await count('client_mutation')).toBe(0);
+    expect(await count('test_note')).toBe(0);
+  });
+
   it('accepts 50 mutations and rejects 51 with VALIDATION_FAILED', async () => {
     const fifty = Array.from({ length: 50 }, () => create(uuidv7()));
     const results = await pushOk(fifty);
@@ -808,6 +816,46 @@ describe('conflicts: list and resolve', () => {
     expect(res.statusCode, res.body).toBe(200);
     const row = await dbRow(`SELECT resolved_by FROM sync_conflict`);
     expect(row.resolved_by).toBe(approver);
+  });
+
+  it("scopes approvers per entity type: another type's approver sees and resolves nothing", async () => {
+    const { conflictId } = await makeConflict(USER);
+    // Holds approval rights for other entity types, not for test_note.
+    const wrong = as(uuidv7(), 'advance.approve,wages.approve,inventory.writeoff.approve');
+    const list = await app.inject({ method: 'GET', url: '/api/v1/sync/conflicts', headers: wrong });
+    expect(list.statusCode).toBe(200);
+    expect(list.json<{ data: unknown[] }>().data).toEqual([]);
+    const res = await resolve(conflictId, { resolution: 'KEEP_SERVER' }, wrong);
+    expect(res.statusCode).toBe(404);
+    expect(await count('sync_conflict', `status = 'OPEN'`)).toBe(1);
+  });
+
+  it('a type without approverPermission is owner-only, even for an approver', async () => {
+    registerEntity('test_owner_only', {
+      scopes: [],
+      create: () => Promise.reject(new Error('unused')),
+      scopeFilter: () => Promise.resolve([]),
+      serialize: () => ({}),
+    } satisfies SyncEntityHandler);
+    const { conflictId } = await makeConflict(USER);
+    await owner.query(`UPDATE sync_conflict SET entity_type = 'test_owner_only'`);
+    const approver = as(uuidv7(), APPROVER_PERMS);
+    const list = await app.inject({
+      method: 'GET',
+      url: '/api/v1/sync/conflicts',
+      headers: approver,
+    });
+    expect(list.json<{ data: unknown[] }>().data).toEqual([]);
+    expect((await resolve(conflictId, { resolution: 'KEEP_SERVER' }, approver)).statusCode).toBe(
+      404,
+    );
+    // The owner still sees it.
+    const own = await app.inject({
+      method: 'GET',
+      url: '/api/v1/sync/conflicts',
+      headers: as(USER),
+    });
+    expect(own.json<{ data: unknown[] }>().data).toHaveLength(1);
   });
 
   it('RECORD_LOCKED on resolve rolls back and leaves the conflict open', async () => {

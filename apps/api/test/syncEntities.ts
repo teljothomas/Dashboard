@@ -152,6 +152,7 @@ async function writeFields(
 
 export const testNoteHandler: SyncEntityHandler<NoteRow> = {
   scopes: ['mine'],
+  approverPermission: 'expense.approve',
 
   async create(tx, caller, m: SyncMutation): Promise<HandlerOutcome> {
     const payload = CreatePayload.parse(m.payload);

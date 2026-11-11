@@ -36,11 +36,15 @@ export function registerSyncRoutes(app: FastifyInstance): void {
       api.post('/sync/push', async (request) => {
         const ctx = requireContext(request);
         const body = PushRequest.parse(request.body);
-        // When the session is bound to a device, the body must name that device.
-        if (ctx.deviceId !== null && ctx.deviceId !== body.deviceId) {
+        // The device recorded in client_mutation, conflicts and audit must be the one the session
+        // is bound to, never a value the body merely claims. The body field only has to agree.
+        if (ctx.deviceId === null) {
+          throw new AppError('FORBIDDEN', 'Session is not bound to a device');
+        }
+        if (ctx.deviceId !== body.deviceId) {
           throw new AppError('FORBIDDEN', 'Device does not match the session');
         }
-        const results = await processPush(app.db, callerOf(request, body.deviceId), body);
+        const results = await processPush(app.db, callerOf(request, ctx.deviceId), body);
         return { data: { results } };
       });
 
