@@ -214,5 +214,19 @@ expenses.listUnsettledFromAdvance(tx, advanceId)
 advances.recordPayrollRecovery(tx, advanceId, amount, wageLineId)
 tally.findVoucher(tx, companyId, guid) / tally.listUnlinkedSalesVouchers(...)
 tally.getFreshness(companyId) -> {lastSuccessAt, stale}
-sync.registerEntity(entityType, {create, update, submit, cancel, scopeFilter, serialize})
+sync.registerEntity(entityType, {scopes, create?, update?, submit?, cancel?, scopeFilter, serialize, applyResolution?})
+   // handlers run in the push transaction (framework holds the per-entity lock) and return
+   // APPLIED{entity, merged?} | CONFLICT{reason, baseVersion, serverVersion, serverSnapshot} |
+   // REJECTED | DUPLICATE_SUSPECTED, or throw AppError / ZodError (recorded as REJECTED).
+   // Update handlers decide stale-version policy with classifyStaleUpdate (SYNC_DESIGN 2.3).
+   // scopeFilter(tx, caller, scope, afterSeq, limit) -> rows after the cursor; types: modules/sync/types.ts
 ```
+
+Sync wire details settled in WP-03.4 (contracts: `packages/contracts/src/sync.ts`): success bodies use the
+section 1 envelope (`{ data: { results } }`, `{ data: { changes, nextCursor, hasMore } }`); `GET /sync/conflicts`
+lists own conflicts (approvers: `expense.approve`, `advance.approve`, `wages.approve`, `inventory.writeoff.approve`
+see all), `status=OPEN|ALL|RESOLVED_*`, cursor = last conflict id in `meta.nextCursor`; `POST /sync/conflicts/:id/resolve`
+takes `{resolution, values?, note?}` (`values` only for MERGED) and returns `{ conflict, entity|null }`; a body `deviceId`
+must equal the session device. Only final results (APPLIED/CONFLICT/REJECTED) are stored for replay; BLOCKED_BY_PREVIOUS
+and DUPLICATE_SUSPECTED are transient. Any code that writes a syncable table outside the sync server must call
+`lockSyncWrite(tx)` first (pull takes the exclusive lock so a cursor never skips an uncommitted row).

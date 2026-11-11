@@ -72,6 +72,21 @@ export interface AuditLog {
   request_id: string | null;
 }
 
+export interface ClientMutation {
+  base_version: number | null;
+  client_created_at: Timestamp;
+  device_id: string;
+  entity_id: string;
+  entity_type: string;
+  mutation_id: string;
+  op: string;
+  payload_hash: string;
+  received_at: Generated<Timestamp>;
+  result: string;
+  result_body: Json;
+  user_id: string;
+}
+
 export interface Division {
   code: string;
   created_at: Generated<Timestamp>;
@@ -144,15 +159,38 @@ export interface SchemaMigration {
   version: number;
 }
 
+export interface SyncConflict {
+  base_version: number | null;
+  client_payload: Json;
+  created_at: Generated<Timestamp>;
+  device_id: string;
+  entity_id: string;
+  entity_type: string;
+  id: string;
+  mutation_id: string;
+  note: string | null;
+  op: string;
+  reason: string;
+  resolved_at: Timestamp | null;
+  resolved_by: string | null;
+  resolved_values: Json | null;
+  server_snapshot: Json | null;
+  server_version: number | null;
+  status: Generated<string>;
+  user_id: string;
+}
+
 export interface DB {
   app_setting: AppSetting;
   attachment: Attachment;
   attachment_link: AttachmentLink;
   audit_log: AuditLog;
+  client_mutation: ClientMutation;
   division: Division;
   job: Job;
   notification: Notification;
   number_sequence: NumberSequence;
   owner_approval: OwnerApproval;
   schema_migration: SchemaMigration;
+  sync_conflict: SyncConflict;
 }

@@ -8,6 +8,7 @@ import {
   registerAttachmentRoutes,
   type StorageAdapter,
 } from './modules/core/attachments/index.js';
+import { registerSyncRoutes } from './modules/sync/index.js';
 import { registerErrorHandling } from './plugins/errorHandler.js';
 import { genRequestId, registerRequestId } from './plugins/requestId.js';
 import { registerRequestContext, type RequestContextProvider } from './plugins/requestContext.js';
@@ -63,6 +64,7 @@ export function buildApp(config: AppConfig, options: BuildAppOptions = {}): Fast
   }
 
   registerRequestContext(app, options.requestContext);
+  registerSyncRoutes(app);
   registerAttachmentRoutes(app, {
     storage: options.storage ?? new LocalFsStorage(config.ATTACHMENTS_DIR),
   });

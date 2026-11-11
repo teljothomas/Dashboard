@@ -4,22 +4,22 @@ Project: Meat Trading, Processing & Logistics ERP (working name: TradeX ERP)
 Current release: none
 Project state: FOUNDATION_IN_PROGRESS
 Application coding: STARTED (Phase 02 foundation packages and apps exist)
-Current stage: READY (WP-03.3 complete; WP-03.4 next)
-Current phase: PHASE-03 (3/6)
-Current task: WP-03.4
+Current stage: READY (WP-03.4 complete; WP-03.5 next)
+Current phase: PHASE-03 (4/6)
+Current task: WP-03.5
 Assigned model: Sonnet 5.5
 Last updated: 2026-11-11
 Last verified commit: WP-02.3 commit on main (`git log --oneline`)
-Next action: WP-03.4
+Next action: WP-03.5
 
 ## CURRENT POSITION
 
 Stage: READY
 Phase: PHASE-03 Database and core services
-Task ID: WP-03.4
+Task ID: WP-03.5
 Task status: NOT_STARTED
 Branch: main (pushed to origin 2026-11-11, owner approved; later pushes still need approval; WP-02.1..02.5 commits are local only)
-Last completed work unit: WP-03.3 (Sonnet 5.5, 2026-11-11)
+Last completed work unit: WP-03.4 (Sonnet 5.5, 2026-11-11)
 
 ## PHASE TRACKER
 
@@ -30,7 +30,7 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | 00 | Governance and discovery | COMPLETE | Opus part done; Sonnet WPs 4/4 (2026-11-11) |
 | 01 | Architecture and contracts | COMPLETE | Baseline v1.0 (WP-01.R / 01.X run on demand) |
 | 02 | Application foundation | COMPLETE | 5/5 (gate passed 2026-11-11) |
-| 03 | Database and core services | IN_PROGRESS | 3/6 |
+| 03 | Database and core services | IN_PROGRESS | 4/6 |
 | 04 | Authentication and permissions | NOT_STARTED | 0/6 |
 | 05 | Tally connector read | NOT_STARTED | 0/9 |
 | 06 | Meat trading and inventory | NOT_STARTED | 0/6 |
@@ -61,15 +61,16 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | WP-03.1 | Kysely/pg DB layer; migration runner (checksum, advisory lock, per-migration tx); `0001_core.sql` (shared trigger functions, division, app_setting, number_sequence, audit_log, job, owner_approval, notification); `db:migrate`, `db:codegen`, committed generated types; `/health` runs SELECT 1 (503 on failure); CI role/DB init | integration 29 pass; `db:migrate` twice (apply, no-op); unit api 20; lint, typecheck, build clean | WP-03.1 commit |
 | WP-03.2 | Core services under `apps/api/src/modules/core` (audit with shallow diff + ambient actor context, numbers `PREFIX-FY-#####` gap-free, settings with Zod schemas + optimistic version + audit, jobs.enqueue, notifications create/list/countUnread/markRead) and `apps/api/src/jobs` (registry + `JobWorker`: 2 s poll, `FOR UPDATE SKIP LOCKED`, exponential backoff, DEAD at max_attempts, lock-expiry reclaim, graceful stop) | integration 75 pass (46 new: audit 5, numbers 6 incl. 12-way parallel, settings 8, notifications 5, jobs 4, worker 14 incl. two workers 40 jobs); unit api 42; lint, typecheck, build, prettier clean | WP-03.2 commit |
 | WP-03.3 | Attachments: migration `0002_attachments.sql` (attachment, attachment_link), `LocalFsStorage` (sha256-sharded, temp+rename, key pattern guard), upload validation (magic bytes JPEG/PNG/WebP/PDF, sharp re-encode strips EXIF/GPS and applies orientation, PDF structure + active-content check), `POST /api/v1/attachments` (10 MB, 1 file, sha256 dedupe: 201 new / 200 existing, audit), `GET /api/v1/attachments/:id` (nosniff, attachment disposition for PDF, access resolvers, unlinked = uploader only, 404 for every denial), `core.attachments.link` + `registerAccessResolver`; `requestContext` auth seam (`request.ctx`, `requireContext`, 401 without a provider) | integration 107 pass x4 runs (32 new attachments); unit api 56 (14 new); lint, typecheck, prettier, build clean; `pnpm audit --prod` clean | WP-03.3 commit |
+| WP-03.4 | Device sync server: migration `0003_sync.sql` (client_mutation, sync_conflict), `packages/contracts/src/sync.ts`, `modules/sync` (registerEntity registry, `POST /sync/push` per-mutation tx with idempotent replay, IDEMPOTENCY_MISMATCH, BLOCKED_BY_PREVIOUS, RECORD_LOCKED incl. TX423 mapping, audit; `classifyStaleUpdate`; `GET /sync/pull` merged sync_seq order + cursor + hasMore with exclusive pull lock; `GET /sync/conflicts`, `POST /sync/conflicts/:id/resolve` KEEP_SERVER/APPLY_CLIENT/MERGED) | integration 147 pass x2 (40 new sync); unit api 69 (12 new), contracts 40; lint, typecheck, prettier, build clean; `pnpm audit --prod` clean | WP-03.4 commit |
 
 ## ACTIVE TASK
 
-Objective: Phase 03 - device sync server (WP-03.4 next).
+Objective: Phase 03 - client offline core (WP-03.5 next).
 Assigned agent: Sonnet 5.5
-Required prompt: prompts/phases/PHASE-03-DATABASE-CORE-SERVICES.md -> WP-03.4
-Required context files: per the WP-03.4 Context list
-Allowed modifications: per WP-03.4 Modify list
-Acceptance criteria: per WP-03.4
+Required prompt: prompts/phases/PHASE-03-DATABASE-CORE-SERVICES.md -> WP-03.5
+Required context files: per the WP-03.5 Context list
+Allowed modifications: per WP-03.5 Modify list
+Acceptance criteria: per WP-03.5
 
 ## OPEN BLOCKERS
 
@@ -87,7 +88,11 @@ Acceptance criteria: per WP-03.4
 
 ## QUALITY GATE
 
-Executed 2026-11-11 (WP-03.3 gate):
+Executed 2026-11-11 (WP-03.4 gate):
+- Lint: pass; Typecheck: pass; Prettier: pass; Unit: pass (domain 57, contracts 40, api 69, web 20); Integration: 147 pass (2 consecutive runs); Build: pass; `db:migrate` applied 0003 then no pending; `pnpm audit --prod`: no known vulnerabilities
+- E2E not re-run (web untouched)
+
+WP-03.3 gate (2026-11-11):
 - Lint: pass; Typecheck: pass (all 4 packages); Prettier: pass; Unit: pass (domain 57, contracts 34, api 56, web 20); Integration: 107 pass (4 consecutive runs; worker backoff test flaked twice from a 500 ms clock-skew bound, widened to 5 s; 3 clean runs after the fix; unit api 57); Build: pass; `db:migrate` applied 0002 then no pending; `pnpm audit --prod`: no known vulnerabilities
 - E2E not re-run (web untouched)
 
@@ -104,11 +109,10 @@ Phase 02 gate (WP-02.5):
 
 ## NEXT EXACT ACTION
 
-Task ID: WP-03.4
+Task ID: WP-03.5
 Phase prompt: prompts/phases/PHASE-03-DATABASE-CORE-SERVICES.md
-Model: Sonnet 5.5
-Precondition: dev DB up (`docker compose -f deploy/compose.dev.yml up -d db`); `apps/api/.env` present (git-ignored).
-Objective: device sync server (push/pull/conflicts), migration `0003_sync.sql`, `packages/contracts/src/sync.ts`
-Files to read: the WP-03.4 Context list only (SYNC_DESIGN.md sections 1-2; INTERFACES.md section 4; DATA_MODEL section 3)
-Notes from 03.3: auth seam exists: `apps/api/src/plugins/requestContext.ts` (`request.ctx`, `requireContext(request)` throws 401, `actorOf(request, ctx)`); `buildApp(config, { db, storage, requestContext })` takes a provider; tests use `apps/api/test/requestContext.ts` (`headerContextProvider`: headers `x-test-user`, `x-test-device`, `x-test-permissions`) and `as(user)` style helpers (see `attachments.integration.test.ts`). Routes are registered in an encapsulated plugin under prefix `/api/v1` (see `modules/core/attachments/routes.ts`); wrap service calls with `actorOf` as `ctx` for audit. Migrations are numbered, so the migrate integration test now derives its counts from the migrations directory. Windows: concurrent same-target `rename` can fail with EPERM, handle races explicitly. Pass jsonb params via `JSON.stringify`. Integration tests: Node and container clocks differ by 100+ ms, use second-scale offsets.
-After this: WP-03.5
+Model: Sonnet 5.5 (Haiku-eligible: SyncStatusChip, SyncBanner components from spec)
+Objective: client offline core: Dexie schema + migrations, outbox, sync engine (single-flight, backoff, 401 pause), BR-301 status derivation, `useOfflineMutation` hook
+Files to read: the WP-03.5 Context list only (OFFLINE_DESIGN.md sections 3-5; SYNC_DESIGN section 2.4; INTERFACES section 4)
+Notes from 03.4: wire contract is in `packages/contracts/src/sync.ts` (PushRequest/PushResponse/PullQuery/PullResponse, SyncOp, MAX_PUSH_MUTATIONS 50, MAX_PULL_LIMIT 500, conflict schemas); success bodies use the `{ data }` envelope (`{ data: { results } }`, `{ data: { changes, nextCursor, hasMore } }`). Push body needs `deviceId` (must equal the session device); results per mutation: APPLIED | CONFLICT (conflictId) | REJECTED (error) | DUPLICATE_SUSPECTED | BLOCKED_BY_PREVIOUS (not stored, resend later). Client deletes outbox entry only on APPLIED. Pull cursor is a number (`sync_seq`); `deleted: true` for archived/cancelled rows. Conflict endpoints: `GET /sync/conflicts`, `POST /sync/conflicts/:id/resolve` `{resolution, values?, note?}`. Server code: `apps/api/src/modules/sync` (handler interface in `types.ts`, policy in `policy.ts`); test entities in `apps/api/test/syncEntities.ts`.
+After this: WP-03.6 (Phase 03 gate; decide the attachment dedupe/link OPEN BLOCKER before it)

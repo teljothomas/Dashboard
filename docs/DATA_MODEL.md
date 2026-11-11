@@ -52,6 +52,9 @@ Opus-approved note in DECISIONS.md.
 - `sync_conflict` — entity_type, entity_id, device_id, user_id, base_version, server_version,
   client_payload jsonb, server_snapshot jsonb, status (`OPEN`,`RESOLVED_KEEP_SERVER`,`RESOLVED_APPLY_CLIENT`,
   `RESOLVED_MERGED`), resolved_by, resolved_at, note.
+- Implemented in `0003_sync.sql` (WP-03.4). Additions to the lists above: `client_mutation.payload_hash`
+  (sha256 of the canonical mutation, detects a reused mutation_id), `client_created_at`; `sync_conflict.id` (uuid v7),
+  `mutation_id` (unique FK), `op`, `reason`, `resolved_values`. `device_id`/`user_id` are plain uuids until WP-04.1 adds FKs.
 
 ## 4. Tally mirror and connector (Phase 05; posting tables Phase 11)
 
