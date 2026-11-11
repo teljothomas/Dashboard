@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16.10
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_ci_only
+          POSTGRES_DB: tradex_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      # CI-only throwaway credentials for the service container above (no real secrets).
+      DATABASE_URL_TEST: postgresql://postgres:postgres_ci_only@127.0.0.1:5432/tradex_test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.8.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Integration tests
+        run: pnpm test:integration
+
+      - name: Build
+        run: pnpm build
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter web exec playwright install --with-deps chromium
+
+      - name: Web e2e smoke
+        run: pnpm --filter web e2e
+
+      - name: Dependency audit (non-blocking until Phase 14)
+        run: pnpm audit --prod
+        continue-on-error: true
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Windows job for the Tally agent (.NET build and test) is added in Phase 05 (WP-05.0).

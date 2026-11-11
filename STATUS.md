@@ -4,22 +4,22 @@ Project: Meat Trading, Processing & Logistics ERP (working name: TradeX ERP)
 Current release: none
 Project state: FOUNDATION_IN_PROGRESS
 Application coding: STARTED (Phase 02 foundation packages and apps exist)
-Current stage: BLOCKED_ON_OWNER (Docker daemon) for WP-02.4
-Current phase: PHASE-02 (3 of 5 WPs complete; 02.4 BLOCKED; 02.5 partial)
-Current task: WP-02.4
+Current stage: READY (Phase 02 complete; Phase 03 next)
+Current phase: PHASE-03 (Phase 02 COMPLETE 5/5)
+Current task: WP-03.1
 Assigned model: Sonnet 5.5
 Last updated: 2026-11-11
 Last verified commit: WP-02.3 commit on main (`git log --oneline`)
-Next action: WP-02.4 (after owner starts Docker Desktop)
+Next action: WP-03.1
 
 ## CURRENT POSITION
 
-Stage: BLOCKED_ON_OWNER
-Phase: PHASE-02 Application foundation
-Task ID: WP-02.4
-Task status: BLOCKED (reason: Docker daemon not running, re-checked 2026-11-11 after WP-02.3; needs owner to start Docker Desktop)
-Branch: main (pushed to origin 2026-11-11, owner approved; later pushes still need approval; WP-02.1..02.3 commits are local only)
-Last completed work unit: WP-02.3 (web foundation, Sonnet 5.5). WP-02.5 partially executed (non-DB commands verified, QUALITY_GATES §1 updated)
+Stage: READY
+Phase: PHASE-03 Database and core services
+Task ID: WP-03.1
+Task status: NOT_STARTED
+Branch: main (pushed to origin 2026-11-11, owner approved; later pushes still need approval; WP-02.1..02.5 commits are local only)
+Last completed work unit: WP-02.5 (Phase 02 gate passed, Sonnet 5.5, 2026-11-11)
 
 ## PHASE TRACKER
 
@@ -29,8 +29,8 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 |---|---|---|---|
 | 00 | Governance and discovery | COMPLETE | Opus part done; Sonnet WPs 4/4 (2026-11-11) |
 | 01 | Architecture and contracts | COMPLETE | Baseline v1.0 (WP-01.R / 01.X run on demand) |
-| 02 | Application foundation | IN_PROGRESS | 3/5 (02.1-02.3 done; 02.4 BLOCKED on Docker; 02.5 partial) |
-| 03 | Database and core services | NOT_STARTED | 0/6 |
+| 02 | Application foundation | COMPLETE | 5/5 (gate passed 2026-11-11) |
+| 03 | Database and core services | NEXT | 0/6 |
 | 04 | Authentication and permissions | NOT_STARTED | 0/6 |
 | 05 | Tally connector read | NOT_STARTED | 0/9 |
 | 06 | Meat trading and inventory | NOT_STARTED | 0/6 |
@@ -56,44 +56,45 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | WP-02.1 | pnpm workspace, strict TS base, ESLint flat (typed) + Prettier, packages/contracts (Zod primitives, 16 error codes, SyncStatus), packages/domain (Money on decimal.js, uuidv7) | domain 57 pass, contracts 34 pass; lint, typecheck, build clean | WP-02.1 commit (70fac61) |
 | WP-02.2 | apps/api Fastify 5 foundation: buildApp, config (Zod), request id, error envelope, security headers, pino redaction, /health, graceful shutdown | api 19 pass; build emits runnable JS; `node dist/server.js` and `pnpm --filter api dev` served /health 200 | WP-02.2 commit (5dc9dae) |
 | WP-02.3 | apps/web Vite+React 19+Tailwind 4 shell, API client, SyncBanner, money/i18n libs, Playwright smoke | web 20 pass; e2e 1 pass; initial JS 144.62 KB gzip; /api dev proxy verified | WP-02.3 commit (bbced0e) |
+| WP-02.4 | deploy/compose.dev.yml (postgres:16.10, loopback only, healthcheck), db-init roles (tradex_owner DDL, tradex_app DML only), .env.example x2, api test:integration + root passthrough, CI workflow (verify + gitleaks), README commands | compose db healthy; tradex_app connects, DML ok, DDL denied; integration script exits 0 (empty suite); CI YAML parses but NOT validated with actionlint | WP-02.4 commit |
+| WP-02.5 | Phase 02 gate: install, lint, typecheck, test, integration, build, e2e, audit all executed; QUALITY_GATES §1 DB rows VERIFIED | domain 57, contracts 34, api 19, web 20 pass; e2e 1 pass; audit clean | WP-02.5 commit |
 
 ## ACTIVE TASK
 
-Objective: Phase 02 - dev infrastructure and CI (WP-02.4), then finish the Phase 02 gate (WP-02.5).
+Objective: Phase 03 - database schema, migrations and core services (WP-03.1 first).
 Assigned agent: Sonnet 5.5
-Required prompt: prompts/phases/PHASE-02-APPLICATION-FOUNDATION.md -> WP-02.4
-Required context files: DEPLOYMENT.md §1; QUALITY_GATES.md §1; SECURITY.md §6
-Allowed modifications: per WP-02.4 Modify list
-Acceptance criteria: per WP-02.4 (compose db healthy, app role connects, CI YAML present)
+Required prompt: prompts/phases/PHASE-03-DATABASE-CORE-SERVICES.md -> WP-03.1
+Required context files: per the WP-03.1 Context list
+Allowed modifications: per WP-03.1 Modify list
+Acceptance criteria: per WP-03.1
 
 ## OPEN BLOCKERS
 
-- WP-02.4 BLOCKED: Docker daemon not running (verified 2026-11-11, `docker info` cannot reach dockerDesktopLinuxEngine pipe). Owner must start Docker Desktop. Blocks Phase 02 gate and therefore Phase 03.
-- Not blocking Phase 02: gitleaks and actionlint not installed on the dev PC (secret scan runs in CI; CI YAML will be marked "not validated" unless actionlint is installed).
+- None for Phase 03. Not blocking: gitleaks and actionlint not installed on the dev PC (secret scan runs in CI; `.github/workflows/ci.yml` is NOT validated with actionlint and has never run on GitHub). .NET SDK absent (blocks WP-05.0).
 
 ## OWNER APPROVAL REQUIRED
 
 - Answer docs/discovery/*.md (non-blocking until Phase 05.7/11/15): TALLY_DISCOVERY.md (owner/Tally PC), OWNER_QUESTIONS.md (owner), CA_QUESTIONS.md (CA). Register: docs/OPEN_DECISIONS.md.
 - Pushing: owner approved first push 2026-11-11 (main → origin). Further pushes need approval per ADR-063.
 - Engage a CA/accountant for ACCT decisions (OD-010..022, OD-033, OD-047, OD-048) before Phase 11 production work.
-- Start Docker Desktop (daemon verified NOT running 2026-11-11; CLI 28.4.0 present) — needed by WP-02.4.
+- Keep Docker Desktop running for DB work (verified running 2026-11-11, dev DB container `tradex-dev-db-1` is up).
 - Install .NET 10 SDK on the dev PC (verified absent 2026-11-11) — needed by WP-05.0.
 - Later protected operations: VPS purchase/domain (Phase 14), production deploy, live data import, production posting enable (Phase 15).
 
 ## QUALITY GATE
 
-Executed 2026-11-11 (after WP-02.3):
-- Lint: pass (verified it flags `any`) · Typecheck: pass · Unit: pass (domain 57, contracts 34, api 19, web 20) · E2E: 1 pass (installed Chrome)
-- Production build: pass (web initial JS 144.62 KB gzip) · Dependency audit (`pnpm audit --prod`): no known vulnerabilities
-- Integration: not run (WP-02.4 blocked) · Security tests: not run · Backup/restore: not run · Secret scan: not run (gitleaks not installed)
+Executed 2026-11-11 (Phase 02 gate, WP-02.5):
+- Install frozen: pass · Lint: pass · Typecheck: pass · Unit: pass (domain 57, contracts 34, api 19, web 20) · E2E: 1 pass (installed Chrome)
+- Integration: pass (empty suite, exit 0; dev DB healthy, tradex_app role verified) · Build: pass (web initial JS 144.62 KB gzip) · `pnpm audit --prod`: no known vulnerabilities
+- Security tests: not run · Backup/restore: not run · Secret scan: not run (gitleaks not installed; CI job defined, never run) · CI YAML: not validated (no actionlint)
 
 ## NEXT EXACT ACTION
 
-Task ID: WP-02.4
-Phase prompt: prompts/phases/PHASE-02-APPLICATION-FOUNDATION.md
+Task ID: WP-03.1
+Phase prompt: prompts/phases/PHASE-03-DATABASE-CORE-SERVICES.md
 Model: Sonnet 5.5
-Precondition: owner has started Docker Desktop (`docker info` shows a Server section)
-Objective: see WP-02.4 heading (compose.dev.yml, db-init roles, .env.example files, CI workflow, test:integration script)
-Files to read: the WP-02.4 Context list only
-Expected output / tests: `docker compose -f deploy/compose.dev.yml up -d db` healthy; connection as tradex_app works; CI YAML present
-After this: finish WP-02.5 (verify the DB rows of QUALITY_GATES §1, Phase 02 gate per §2) -> WP-03.1
+Precondition: dev DB up (`docker compose -f deploy/compose.dev.yml up -d db`); Docker Desktop running
+Objective: see WP-03.1 heading
+Files to read: the WP-03.1 Context list only
+Note for 03.1: CI integration job currently connects as the postgres superuser to an empty tradex_test; add role/DB init for CI if tests need tradex_app. Migrations run as tradex_owner (DATABASE_URL_MIGRATE).
+After this: WP-03.2

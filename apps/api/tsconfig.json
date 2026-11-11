@@ -8,5 +8,5 @@
       "@tradex/domain": ["../../packages/domain/src/index.ts"]
     }
   },
-  "include": ["src", "vitest.config.ts"]
+  "include": ["src", "vitest.config.ts", "vitest.integration.config.ts"]
 }

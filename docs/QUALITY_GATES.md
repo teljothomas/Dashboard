@@ -7,7 +7,9 @@ script names and change status to VERIFIED with the date. Later prompts must che
 before relying on it; if not, stop and fix Phase 02 output rather than inventing a command.
 
 Environment (dev PC, recorded 2026-11-11, WP-00.4): Node v24.11.0 · pnpm 12.8.1 · git 2.51.0.windows.1 ·
-Docker CLI 28.4.0 (daemon NOT running) · .NET SDK not installed.
+Docker 28.4.0 (daemon running as of 2026-11-11, WP-02.4) · .NET SDK not installed.
+CI workflow `.github/workflows/ci.yml`: YAML parses, `docker compose config` ok for compose.dev.yml; NOT validated with
+`actionlint` (not installed) and has never run on GitHub.
 
 | Purpose | Command | Status |
 |---|---|---|
@@ -16,13 +18,13 @@ Docker CLI 28.4.0 (daemon NOT running) · .NET SDK not installed.
 | Typecheck | `pnpm typecheck` | VERIFIED 2026-11-11 |
 | Unit tests (all) | `pnpm test` | VERIFIED 2026-11-11 (domain 57, contracts 34, api 19, web 20; 0 fail) |
 | Unit tests (one package) | `pnpm --filter <api|web|contracts|domain> test <pattern>` | VERIFIED 2026-11-11. Corrected: with pnpm 12.8.1 the `--` before the pattern is forwarded to vitest and the pattern is ignored (all files ran); omit it |
-| API integration tests (needs test DB) | `pnpm --filter api test:integration` | BLOCKED: script not created (WP-02.4 blocked, Docker daemon not running) |
-| Start test DB | `docker compose -f deploy/compose.dev.yml up -d db` | BLOCKED: file not created; Docker daemon not running (checked 2026-11-11) |
+| API integration tests (needs test DB) | `pnpm --filter api test:integration` | VERIFIED 2026-11-11 (root `pnpm test:integration` passes through; suite is empty until WP-03.1, exits 0 with "No test files found"; reads `DATABASE_URL_TEST`) |
+| Start test DB | `docker compose -f deploy/compose.dev.yml up -d db` | VERIFIED 2026-11-11 (postgres:16.10, healthy, bound 127.0.0.1:5432 only; DBs tradex_dev + tradex_test; `tradex_app` connects, DML works, DDL and DROP denied; `tradex_owner` DDL works) |
 | Migrations | `pnpm --filter api db:migrate` | PLANNED (Phase 03) |
 | E2E | `pnpm --filter web e2e` | VERIFIED 2026-11-11 (builds, then Playwright on `vite preview`; local run uses installed Chrome, CI uses Chromium) |
 | Build | `pnpm build` | VERIFIED 2026-11-11 (web initial JS 144.62 KB gzip) |
 | Dependency audit | `pnpm audit --prod` | VERIFIED 2026-11-11 (no known vulnerabilities) |
-| Secret scan | `gitleaks detect --no-banner` | NOT VERIFIED: gitleaks not installed on dev PC; runs in CI (WP-02.4) |
+| Secret scan | `gitleaks detect --no-banner` | NOT VERIFIED locally: gitleaks not installed on dev PC. CI job `secret-scan` (gitleaks-action) is defined in `.github/workflows/ci.yml` but has not run (no remote run yet) |
 | Agent build/test | `dotnet build agent/TradeX.TallyAgent.sln` / `dotnet test agent/TradeX.TallyAgent.sln` | PLANNED (requires .NET 10 SDK; not installed on dev PC as of 2026-11-11) |
 
 Environment facts observed 2026-11-11 on dev PC: Node v24.11.0, pnpm 12.8.1, npm 11.6.1, git 2.51.0,

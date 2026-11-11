@@ -1,0 +1,33 @@
+# Dev infrastructure: PostgreSQL only (DEPLOYMENT.md section 1). Run the API and web with `pnpm dev`.
+# Usage: docker compose -f deploy/compose.dev.yml up -d db
+# The passwords below are DEV-ONLY defaults for a database bound to 127.0.0.1. Override via the
+# environment or a root `.env` file (see .env.example). Never reuse them anywhere else.
+name: tradex-dev
+
+services:
+  db:
+    image: postgres:16.10
+    restart: unless-stopped
+    ports:
+      # Loopback only: the dev database is never reachable from the network.
+      - '127.0.0.1:5432:5432'
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:-postgres_dev_only}
+      POSTGRES_DB: tradex_dev
+      TRADEX_OWNER_PASSWORD: ${TRADEX_OWNER_PASSWORD:-tradex_owner_dev_only}
+      TRADEX_APP_PASSWORD: ${TRADEX_APP_PASSWORD:-tradex_app_dev_only}
+    volumes:
+      - tradex_dev_pgdata:/var/lib/postgresql/data
+      - ./db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # TCP check on 127.0.0.1: the temporary init-time server listens on the unix socket only,
+      # so this turns healthy only after init scripts have finished.
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U postgres -d tradex_dev']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+volumes:
+  tradex_dev_pgdata:
