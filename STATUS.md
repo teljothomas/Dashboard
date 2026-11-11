@@ -4,22 +4,22 @@ Project: Meat Trading, Processing & Logistics ERP (working name: TradeX ERP)
 Current release: none
 Project state: FOUNDATION_IN_PROGRESS
 Application coding: STARTED (Phase 02 foundation packages and apps exist)
-Current stage: READY (WP-03.4 complete; WP-03.5 next)
-Current phase: PHASE-03 (4/6)
-Current task: WP-03.5
+Current stage: READY (WP-03.5 complete; WP-03.6 next)
+Current phase: PHASE-03 (5/6)
+Current task: WP-03.6
 Assigned model: Sonnet 5.5
 Last updated: 2026-11-11
 Last verified commit: WP-02.3 commit on main (`git log --oneline`)
-Next action: WP-03.5
+Next action: WP-03.6
 
 ## CURRENT POSITION
 
 Stage: READY
 Phase: PHASE-03 Database and core services
-Task ID: WP-03.5
+Task ID: WP-03.6
 Task status: NOT_STARTED
 Branch: main (pushed to origin 2026-11-11, owner approved; later pushes still need approval; WP-02.1..02.5 commits are local only)
-Last completed work unit: WP-03.4 (Sonnet 5.5, 2026-11-11)
+Last completed work unit: WP-03.5 (Sonnet 5.5, 2026-11-11)
 
 ## PHASE TRACKER
 
@@ -30,7 +30,7 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | 00 | Governance and discovery | COMPLETE | Opus part done; Sonnet WPs 4/4 (2026-11-11) |
 | 01 | Architecture and contracts | COMPLETE | Baseline v1.0 (WP-01.R / 01.X run on demand) |
 | 02 | Application foundation | COMPLETE | 5/5 (gate passed 2026-11-11) |
-| 03 | Database and core services | IN_PROGRESS | 4/6 |
+| 03 | Database and core services | IN_PROGRESS | 5/6 |
 | 04 | Authentication and permissions | NOT_STARTED | 0/6 |
 | 05 | Tally connector read | NOT_STARTED | 0/9 |
 | 06 | Meat trading and inventory | NOT_STARTED | 0/6 |
@@ -62,15 +62,16 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | WP-03.2 | Core services under `apps/api/src/modules/core` (audit with shallow diff + ambient actor context, numbers `PREFIX-FY-#####` gap-free, settings with Zod schemas + optimistic version + audit, jobs.enqueue, notifications create/list/countUnread/markRead) and `apps/api/src/jobs` (registry + `JobWorker`: 2 s poll, `FOR UPDATE SKIP LOCKED`, exponential backoff, DEAD at max_attempts, lock-expiry reclaim, graceful stop) | integration 75 pass (46 new: audit 5, numbers 6 incl. 12-way parallel, settings 8, notifications 5, jobs 4, worker 14 incl. two workers 40 jobs); unit api 42; lint, typecheck, build, prettier clean | WP-03.2 commit |
 | WP-03.3 | Attachments: migration `0002_attachments.sql` (attachment, attachment_link), `LocalFsStorage` (sha256-sharded, temp+rename, key pattern guard), upload validation (magic bytes JPEG/PNG/WebP/PDF, sharp re-encode strips EXIF/GPS and applies orientation, PDF structure + active-content check), `POST /api/v1/attachments` (10 MB, 1 file, sha256 dedupe: 201 new / 200 existing, audit), `GET /api/v1/attachments/:id` (nosniff, attachment disposition for PDF, access resolvers, unlinked = uploader only, 404 for every denial), `core.attachments.link` + `registerAccessResolver`; `requestContext` auth seam (`request.ctx`, `requireContext`, 401 without a provider) | integration 107 pass x4 runs (32 new attachments); unit api 56 (14 new); lint, typecheck, prettier, build clean; `pnpm audit --prod` clean | WP-03.3 commit |
 | WP-03.4 | Device sync server: migration `0003_sync.sql` (client_mutation, sync_conflict), `packages/contracts/src/sync.ts`, `modules/sync` (registerEntity registry, `POST /sync/push` per-mutation tx with idempotent replay, IDEMPOTENCY_MISMATCH, BLOCKED_BY_PREVIOUS, RECORD_LOCKED incl. TX423 mapping, audit; `classifyStaleUpdate`; `GET /sync/pull` merged sync_seq order + cursor + hasMore with exclusive pull lock; `GET /sync/conflicts`, `POST /sync/conflicts/:id/resolve` KEEP_SERVER/APPLY_CLIENT/MERGED) | integration 150 pass x2 (43 new sync); unit api 69 (12 new), contracts 40; lint, typecheck, prettier, build clean; `pnpm audit --prod` clean | WP-03.4 commit |
+| WP-03.5 | Client offline core in `apps/web/src/offline`: Dexie schema v1 per OFFLINE_DESIGN 3 + device id bootstrap, outbox (enqueue in one tx with the local record, FIFO, one entry per record per batch, delete only on APPLIED), sync engine (single flight with Web Locks, push 50 then pull mine/reference, backoff 5 s to 10 min, 401 pause/resume, storage warning), BR-301 `deriveSyncStatus`, `useOfflineMutation`, `SyncStatusChip`, banner paused/low-storage | web 102 pass (82 new), domain 57, contracts 40, api 69; lint, typecheck, prettier, build clean (initial JS 147.48 KB gzip); e2e 1 pass; audit clean | WP-03.5 commit |
 
 ## ACTIVE TASK
 
-Objective: Phase 03 - client offline core (WP-03.5 next).
+Objective: Phase 03 gate (WP-03.6 next).
 Assigned agent: Sonnet 5.5
-Required prompt: prompts/phases/PHASE-03-DATABASE-CORE-SERVICES.md -> WP-03.5
-Required context files: per the WP-03.5 Context list
-Allowed modifications: per WP-03.5 Modify list
-Acceptance criteria: per WP-03.5
+Required prompt: prompts/phases/PHASE-03-DATABASE-CORE-SERVICES.md -> WP-03.6
+Required context files: per the WP-03.6 text
+Allowed modifications: docs/QUALITY_GATES.md, STATUS.md, docs/TASK_LOG.md
+Acceptance criteria: per WP-03.6
 
 ## OPEN BLOCKERS
 
@@ -88,7 +89,11 @@ Acceptance criteria: per WP-03.5
 
 ## QUALITY GATE
 
-Executed 2026-11-11 (WP-03.4 gate):
+Executed 2026-11-11 (WP-03.5 gate):
+- Lint: pass; Typecheck: pass (all 4 packages); Prettier: pass; Unit: pass (domain 57, contracts 40, api 69, web 102); Build: pass (web initial JS 147.48 KB gzip); E2E: 1 pass; `pnpm audit --prod`: no known vulnerabilities
+- Integration not re-run (api untouched); no migration
+
+WP-03.4 gate (2026-11-11):
 - Lint: pass; Typecheck: pass; Prettier: pass; Unit: pass (domain 57, contracts 40, api 69, web 20); Integration: 150 pass (2 consecutive runs, after security follow-up); Build: pass; `db:migrate` applied 0003 then no pending; `pnpm audit --prod`: no known vulnerabilities
 - E2E not re-run (web untouched)
 
@@ -109,10 +114,10 @@ Phase 02 gate (WP-02.5):
 
 ## NEXT EXACT ACTION
 
-Task ID: WP-03.5
+Task ID: WP-03.6
 Phase prompt: prompts/phases/PHASE-03-DATABASE-CORE-SERVICES.md
-Model: Sonnet 5.5 (Haiku-eligible: SyncStatusChip, SyncBanner components from spec)
-Objective: client offline core: Dexie schema + migrations, outbox, sync engine (single-flight, backoff, 401 pause), BR-301 status derivation, `useOfflineMutation` hook
-Files to read: the WP-03.5 Context list only (OFFLINE_DESIGN.md sections 3-5; SYNC_DESIGN section 2.4; INTERFACES section 4)
-Notes from 03.4: wire contract is in `packages/contracts/src/sync.ts` (PushRequest/PushResponse/PullQuery/PullResponse, SyncOp, MAX_PUSH_MUTATIONS 50, MAX_PULL_LIMIT 500, conflict schemas); success bodies use the `{ data }` envelope (`{ data: { results } }`, `{ data: { changes, nextCursor, hasMore } }`). Push body needs `deviceId` (must equal the session device); results per mutation: APPLIED | CONFLICT (conflictId) | REJECTED (error) | DUPLICATE_SUSPECTED | BLOCKED_BY_PREVIOUS (not stored, resend later). Client deletes outbox entry only on APPLIED. Pull cursor is a number (`sync_seq`); `deleted: true` for archived/cancelled rows. Conflict endpoints: `GET /sync/conflicts`, `POST /sync/conflicts/:id/resolve` `{resolution, values?, note?}`. Server code: `apps/api/src/modules/sync` (handler interface in `types.ts`, policy in `policy.ts`); test entities in `apps/api/test/syncEntities.ts`.
-After this: WP-03.6 (Phase 03 gate; decide the attachment dedupe/link OPEN BLOCKER before it)
+Model: Sonnet 5.5
+Objective: Phase 03 gate. Run the full suite plus migrations on an empty DB plus build; update QUALITY_GATES (`db:migrate`, `test:integration` VERIFIED); next action WP-04.1; commit.
+Decide first (OPEN BLOCKERS): attachment dedupe and `core.attachments.link` actor check (owner/Opus). If undecided, record it as carried into Phase 04 in the gate result.
+Notes from 03.5: `startOfflineRuntime()` (offline/runtime.ts) is not called from `main.tsx` yet; Phase 04 must set `sessionStore.userId` on login and call `engine.resume()` after a 401 re-login. A persistent DUPLICATE_SUSPECTED keeps its outbox entry PENDING with `lastError` set and is resent every run (no UI yet). Attachment upload step in the engine is a placeholder (entries with `dependsOn` wait). Conflict screen, Settings sync page and JSON export of pending items are not built (Phase 12 hardening). Pull `data` is read as `{ version, status, number, syncStatus }` (see `readServerFields`); entity handlers must serialize those fields.
+After this: WP-04.1

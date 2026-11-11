@@ -18,6 +18,25 @@ const en = {
     'You are offline. Changes are saved on this phone only and upload when you are back online.',
   'sync.syncing': 'Syncing {count} items…',
   'sync.attention': '{count} items need attention',
+  'sync.paused': 'Your session expired. Sign in again to continue syncing.',
+  'sync.lowStorage':
+    'This phone is almost out of storage. Free some space to keep working offline.',
+  'syncStatus.LOCAL_ONLY.label': 'On this phone',
+  'syncStatus.LOCAL_ONLY.explain': 'Saved on this phone only. It will upload when you are online.',
+  'syncStatus.SYNCED.label': 'Synced',
+  'syncStatus.SYNCED.explain': 'Saved on the server.',
+  'syncStatus.AWAITING_APPROVAL.label': 'Awaiting approval',
+  'syncStatus.AWAITING_APPROVAL.explain': 'Uploaded. Waiting for an approver.',
+  'syncStatus.AWAITING_TALLY.label': 'Awaiting Tally',
+  'syncStatus.AWAITING_TALLY.explain': 'Approved. The office PC will post it to Tally.',
+  'syncStatus.POSTED_TO_TALLY.label': 'Posted to Tally',
+  'syncStatus.POSTED_TO_TALLY.explain': 'Posted and verified in Tally.',
+  'syncStatus.FAILED.label': 'Failed',
+  'syncStatus.FAILED.explain':
+    'The server rejected this. Open it, fix the problem and send it again.',
+  'syncStatus.REQUIRES_RECONCILIATION.label': 'Needs review',
+  'syncStatus.REQUIRES_RECONCILIATION.explain':
+    'This record changed elsewhere or is locked. An approver has to review it.',
 } as const;
 
 export type MessageKey = keyof typeof en;
