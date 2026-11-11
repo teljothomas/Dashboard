@@ -6,6 +6,9 @@ Status PLANNED = defined here, created by Phase 02, not yet verified. Phase 02 m
 script names and change status to VERIFIED with the date. Later prompts must check a command is VERIFIED
 before relying on it; if not, stop and fix Phase 02 output rather than inventing a command.
 
+Environment (dev PC, recorded 2026-11-11, WP-00.4): Node v24.11.0 · pnpm 12.8.1 · git 2.51.0.windows.1 ·
+Docker CLI 28.4.0 (daemon NOT running) · .NET SDK not installed.
+
 | Purpose | Command | Status |
 |---|---|---|
 | Install | `pnpm install --frozen-lockfile` | PLANNED |
