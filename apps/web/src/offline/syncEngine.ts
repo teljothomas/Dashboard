@@ -11,6 +11,7 @@ import { api, ApiError } from '../lib/api';
 import { ensureDeviceId, getMeta, META, setMeta, type TradexOfflineDb } from './db';
 import {
   applyPushResults,
+  entriesOf,
   markSending,
   nextBatch,
   outboxCounts,
@@ -152,7 +153,12 @@ export function createSyncEngine(options: SyncEngineOptions): SyncEngine {
   let cancelRetry: (() => void) | undefined;
 
   async function refreshCounts(): Promise<void> {
-    const counts = await outboxCounts(db);
+    const userId = getUserId();
+    if (userId === undefined) {
+      syncStatusStore.set({ syncing: 0, needsAttention: 0 });
+      return;
+    }
+    const counts = await outboxCounts(db, userId);
     syncStatusStore.set({ syncing: counts.syncing, needsAttention: counts.needsAttention });
   }
 
@@ -253,6 +259,7 @@ export function createSyncEngine(options: SyncEngineOptions): SyncEngine {
   }
 
   async function applyPullPage(
+    userId: string,
     scope: SyncScope,
     changes: readonly PullChange[],
     cursorKey: string,
@@ -267,12 +274,13 @@ export function createSyncEngine(options: SyncEngineOptions): SyncEngine {
       db.meta,
       async () => {
         for (const change of changes) {
-          const key: [string, string] = [change.entityType, change.entityId];
+          const key: [string, string, string] = [userId, change.entityType, change.entityId];
           if (scope === 'reference') {
             if (change.deleted) {
               await db.reference.delete(key);
             } else {
               await db.reference.put({
+                userId,
                 entityType: change.entityType,
                 id: change.entityId,
                 data: change.data,
@@ -282,10 +290,7 @@ export function createSyncEngine(options: SyncEngineOptions): SyncEngine {
             continue;
           }
 
-          const pending = await db.outbox
-            .where('[entityType+entityId]')
-            .equals([change.entityType, change.entityId])
-            .count();
+          const pending = (await entriesOf(db, userId, change.entityType, change.entityId)).length;
           const fields = readServerFields(change.data);
           if (pending > 0) {
             // Local edits win until their mutations resolve: keep the server copy aside (SYNC_DESIGN 2.2).
@@ -293,6 +298,7 @@ export function createSyncEngine(options: SyncEngineOptions): SyncEngine {
               await db.serverShadow.delete(key);
             } else {
               await db.serverShadow.put({
+                userId,
                 entityType: change.entityType,
                 id: change.entityId,
                 version: fields.version,
@@ -309,6 +315,7 @@ export function createSyncEngine(options: SyncEngineOptions): SyncEngine {
             continue;
           }
           await db.records.put({
+            userId,
             entityType: change.entityType,
             id: change.entityId,
             version: fields.version,
@@ -319,7 +326,7 @@ export function createSyncEngine(options: SyncEngineOptions): SyncEngine {
             status: 'SYNCED',
             updatedAt: now(),
           });
-          await refreshRecordStatus(db, change.entityType, change.entityId);
+          await refreshRecordStatus(db, userId, change.entityType, change.entityId);
         }
         await setMeta(db, cursorKey, nextCursor);
       },
@@ -327,7 +334,7 @@ export function createSyncEngine(options: SyncEngineOptions): SyncEngine {
   }
 
   async function pullScope(scope: SyncScope, userId: string, totals: SyncRunResult): Promise<void> {
-    const cursorKey = scope === 'mine' ? META.cursor(scope, userId) : META.cursor(scope);
+    const cursorKey = META.cursor(scope, userId);
     let cursor = (await getMeta<number>(db, cursorKey)) ?? 0;
     for (let page = 0; page < MAX_PULL_PAGES; page += 1) {
       let body: unknown;
@@ -350,7 +357,7 @@ export function createSyncEngine(options: SyncEngineOptions): SyncEngine {
       if (hasMore && nextCursor <= cursor) {
         throw new Error('Pull cursor did not advance');
       }
-      await applyPullPage(scope, changes, cursorKey, Math.max(nextCursor, cursor));
+      await applyPullPage(userId, scope, changes, cursorKey, Math.max(nextCursor, cursor));
       totals.pulled += changes.length;
       cursor = Math.max(nextCursor, cursor);
       if (!hasMore) {

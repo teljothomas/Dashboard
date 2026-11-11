@@ -35,7 +35,7 @@ describe('useOfflineMutation', () => {
     expect(saved?.entry).toMatchObject({ op: 'CREATE', userId: 'u1', entityType: 'expense' });
     expect(saved?.entityId).toMatch(/^[0-9a-f-]{36}$/);
     expect(await db.outbox.count()).toBe(1);
-    expect(await db.records.get(['expense', saved?.entityId ?? ''])).toMatchObject({
+    expect(await db.records.get(['u1', 'expense', saved?.entityId ?? ''])).toMatchObject({
       status: 'LOCAL_ONLY',
       data: { amount: '12.50' },
     });
@@ -58,7 +58,10 @@ describe('useOfflineMutation', () => {
     const entries = await db.outbox.orderBy('createdAt').toArray();
     expect(entries.map((e) => e.op)).toEqual(['CREATE', 'UPDATE', 'SUBMIT']);
     expect(entries[1]?.baseVersion).toBeNull(); // queued behind the unacknowledged CREATE
-    expect((await db.records.get(['expense', id]))?.data).toEqual({ amount: '1.00', note: 'n' });
+    expect((await db.records.get(['u1', 'expense', id]))?.data).toEqual({
+      amount: '1.00',
+      note: 'n',
+    });
   });
 
   it('refuses to save without a signed-in user and queues nothing', async () => {

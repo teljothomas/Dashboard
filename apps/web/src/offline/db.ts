@@ -43,6 +43,8 @@ export interface OutboxEntry {
 
 /** Local copy of a syncable record: server data plus local edits. */
 export interface LocalRecord {
+  /** Owner: every synced row is stored per signed-in user, so a shared device never mixes users. */
+  userId: string;
   entityType: string;
   id: string;
   /** Server version this copy is based on. Null until the server has acknowledged the record. */
@@ -61,6 +63,7 @@ export interface LocalRecord {
 
 /** Server copy stored aside while the record has pending local mutations (SYNC_DESIGN 2.2). */
 export interface ServerShadow {
+  userId: string;
   entityType: string;
   id: string;
   version: number | null;
@@ -69,6 +72,7 @@ export interface ServerShadow {
 }
 
 export interface ReferenceRow {
+  userId: string;
   entityType: string;
   id: string;
   data: Record<string, unknown>;
@@ -96,9 +100,9 @@ export interface MetaRow {
 }
 
 export class TradexOfflineDb extends Dexie {
-  declare records: Table<LocalRecord, [string, string]>;
-  declare serverShadow: Table<ServerShadow, [string, string]>;
-  declare reference: Table<ReferenceRow, [string, string]>;
+  declare records: Table<LocalRecord, [string, string, string]>;
+  declare serverShadow: Table<ServerShadow, [string, string, string]>;
+  declare reference: Table<ReferenceRow, [string, string, string]>;
   declare outbox: Table<OutboxEntry, string>;
   declare attachmentsQueue: Table<AttachmentQueueItem, string>;
   declare meta: Table<MetaRow, string>;
@@ -106,9 +110,9 @@ export class TradexOfflineDb extends Dexie {
   constructor(name: string = DB_NAME) {
     super(name);
     this.version(1).stores({
-      records: '[entityType+id], entityType, status, updatedAt',
-      serverShadow: '[entityType+id]',
-      reference: '[entityType+id], entityType',
+      records: '[userId+entityType+id], userId, [userId+status], entityType, status, updatedAt',
+      serverShadow: '[userId+entityType+id]',
+      reference: '[userId+entityType+id], userId, entityType',
       outbox: 'mutationId, [entityType+entityId], state, createdAt, userId',
       attachmentsQueue: 'localId, state, createdAt',
       meta: 'key',
@@ -133,14 +137,13 @@ export async function setMeta(db: TradexOfflineDb, key: string, value: unknown):
   await db.meta.put({ key, value });
 }
 
-/** Meta keys. Pull cursors are per scope (and per user for `mine`). */
+/** Meta keys. Pull cursors are per scope and per user (each user's rows are stored separately). */
 export const META = {
   deviceId: 'deviceId',
   schemaVersion: 'schemaVersion',
   lastPushAt: 'lastPushAt',
   lastPullAt: 'lastPullAt',
-  cursor: (scope: string, userId?: string): string =>
-    userId === undefined ? `cursor:${scope}` : `cursor:${scope}:${userId}`,
+  cursor: (scope: string, userId: string): string => `cursor:${scope}:${userId}`,
 } as const;
 
 /**

@@ -52,14 +52,17 @@ export function readServerFields(data: Record<string, unknown>): {
   };
 }
 
-async function entriesOf(
+/** Outbox entries of one record of one user, oldest first. */
+export async function entriesOf(
   db: TradexOfflineDb,
+  userId: string,
   entityType: string,
   entityId: string,
 ): Promise<OutboxEntry[]> {
   return db.outbox
     .where('[entityType+entityId]')
     .equals([entityType, entityId])
+    .filter((e) => e.userId === userId)
     .sortBy('createdAt');
 }
 
@@ -69,14 +72,15 @@ async function entriesOf(
  */
 export async function refreshRecordStatus(
   db: TradexOfflineDb,
+  userId: string,
   entityType: string,
   id: string,
 ): Promise<SyncStatus | undefined> {
-  const record = await db.records.get([entityType, id]);
+  const record = await db.records.get([userId, entityType, id]);
   if (record === undefined) {
     return undefined;
   }
-  const entries = await entriesOf(db, entityType, id);
+  const entries = await entriesOf(db, userId, entityType, id);
   const status = deriveSyncStatus({
     mutations: entries.map((e) => ({ state: e.state, errorCode: e.lastError?.code ?? null })),
     server: { syncStatus: record.serverSyncStatus, status: record.serverStatus },
@@ -100,9 +104,9 @@ export async function enqueueMutation(
   const mutationId = input.mutationId ?? uuidv7();
 
   return db.transaction('rw', db.records, db.outbox, db.serverShadow, async () => {
-    const key: [string, string] = [input.entityType, input.entityId];
+    const key: [string, string, string] = [input.userId, input.entityType, input.entityId];
     const existing = await db.records.get(key);
-    const earlier = await entriesOf(db, input.entityType, input.entityId);
+    const earlier = await entriesOf(db, input.userId, input.entityType, input.entityId);
 
     if (input.op === 'CREATE' && (existing !== undefined || earlier.length > 0)) {
       throw new OutboxError(
@@ -153,6 +157,7 @@ export async function enqueueMutation(
         ? { ...(existing?.data ?? {}), ...localFields }
         : (existing?.data ?? {});
     const record: LocalRecord = {
+      userId: input.userId,
       entityType: input.entityType,
       id: input.entityId,
       version: existing?.version ?? input.baseVersion ?? null,
@@ -164,7 +169,7 @@ export async function enqueueMutation(
       updatedAt: now,
     };
     await db.records.put(record);
-    await refreshRecordStatus(db, input.entityType, input.entityId);
+    await refreshRecordStatus(db, input.userId, input.entityType, input.entityId);
     return entry;
   });
 }
@@ -224,7 +229,7 @@ export async function nextBatch(
     }
     let baseVersion = entry.baseVersion;
     if (baseVersion === null && entry.op !== 'CREATE') {
-      const record = await db.records.get([entry.entityType, entry.entityId]);
+      const record = await db.records.get([entry.userId, entry.entityType, entry.entityId]);
       baseVersion = record?.version ?? null;
       if (baseVersion === null) {
         continue; // unknown base: cannot be sent safely
@@ -303,7 +308,7 @@ export async function applyPushResults(
         continue;
       }
       const result = byId.get(entry.mutationId);
-      const touched: [string, string] = [entry.entityType, entry.entityId];
+      const touched: [string, string, string] = [entry.userId, entry.entityType, entry.entityId];
 
       switch (result?.result) {
         case 'APPLIED': {
@@ -318,7 +323,7 @@ export async function applyPushResults(
               serverSyncStatus: result.entity.syncStatus,
             });
           }
-          if ((await entriesOf(db, entry.entityType, entry.entityId)).length === 0) {
+          if ((await entriesOf(db, entry.userId, entry.entityType, entry.entityId)).length === 0) {
             // The follow-up pull delivers the post-apply server row (the push bumped its sync_seq).
             await db.serverShadow.delete(touched);
           }
@@ -356,7 +361,7 @@ export async function applyPushResults(
           outcome.transient.push(entry.mutationId);
           break;
       }
-      await refreshRecordStatus(db, entry.entityType, entry.entityId);
+      await refreshRecordStatus(db, entry.userId, entry.entityType, entry.entityId);
     }
   });
   return outcome;
@@ -376,7 +381,7 @@ export async function retryEntry(db: TradexOfflineDb, mutationId: string): Promi
       lastError: null,
       conflictId: null,
     });
-    await refreshRecordStatus(db, entry.entityType, entry.entityId);
+    await refreshRecordStatus(db, entry.userId, entry.entityType, entry.entityId);
   });
 }
 
@@ -392,14 +397,14 @@ export async function discardEntry(db: TradexOfflineDb, mutationId: string): Pro
     }
     if (entry.op === 'CREATE') {
       // The server never saw this record, so nothing that was queued behind the CREATE can apply.
-      const dependents = await entriesOf(db, entry.entityType, entry.entityId);
+      const dependents = await entriesOf(db, entry.userId, entry.entityType, entry.entityId);
       await db.outbox.bulkDelete(dependents.map((e) => e.mutationId));
-      await db.records.delete([entry.entityType, entry.entityId]);
-      await db.serverShadow.delete([entry.entityType, entry.entityId]);
+      await db.records.delete([entry.userId, entry.entityType, entry.entityId]);
+      await db.serverShadow.delete([entry.userId, entry.entityType, entry.entityId]);
       return;
     }
     await db.outbox.delete(mutationId);
-    await refreshRecordStatus(db, entry.entityType, entry.entityId);
+    await refreshRecordStatus(db, entry.userId, entry.entityType, entry.entityId);
   });
 }
 
@@ -410,11 +415,25 @@ export interface OutboxCounts {
   needsAttention: number;
 }
 
-export async function outboxCounts(db: TradexOfflineDb): Promise<OutboxCounts> {
+export async function outboxCounts(db: TradexOfflineDb, userId: string): Promise<OutboxCounts> {
   const [pending, sending, flagged] = await Promise.all([
-    db.outbox.where('state').equals('PENDING').count(),
-    db.outbox.where('state').equals('SENDING').count(),
-    db.records.where('status').anyOf(['FAILED', 'REQUIRES_RECONCILIATION']).count(),
+    db.outbox
+      .where('userId')
+      .equals(userId)
+      .filter((e) => e.state === 'PENDING')
+      .count(),
+    db.outbox
+      .where('userId')
+      .equals(userId)
+      .filter((e) => e.state === 'SENDING')
+      .count(),
+    db.records
+      .where('[userId+status]')
+      .anyOf([
+        [userId, 'FAILED'],
+        [userId, 'REQUIRES_RECONCILIATION'],
+      ])
+      .count(),
   ]);
   return { syncing: pending + sending, needsAttention: flagged };
 }

@@ -150,7 +150,7 @@ describe('offline create', () => {
       baseVersion: null,
       userId: 'u1',
     });
-    const record = await db.records.get(['expense', id]);
+    const record = await db.records.get(['u1', 'expense', id]);
     expect(record).toMatchObject({
       status: 'LOCAL_ONLY',
       version: null,
@@ -214,7 +214,7 @@ describe('acknowledgement', () => {
     expect(run).toMatchObject({ status: 'ok', applied: 1 });
     expect(server.pushes).toHaveLength(1);
     expect(await db.outbox.count()).toBe(0);
-    expect(await db.records.get(['expense', id])).toMatchObject({
+    expect(await db.records.get(['u1', 'expense', id])).toMatchObject({
       status: 'SYNCED',
       version: 1,
       number: 'EXP-2026-00001',
@@ -241,7 +241,7 @@ describe('acknowledgement', () => {
     const id = uuidv7();
     await create(id);
     await engine.trigger('manual');
-    expect((await db.records.get(['expense', id]))?.status).toBe('AWAITING_APPROVAL');
+    expect((await db.records.get(['u1', 'expense', id]))?.status).toBe('AWAITING_APPROVAL');
   });
 
   it('sends the body as the contract requires (deviceId, FIFO fields, null baseVersion for CREATE)', async () => {
@@ -286,8 +286,8 @@ describe('conflict, rejection, transient results', () => {
       [a, 'CREATE', 'CONFLICT'],
       [a, 'UPDATE', 'PENDING'],
     ]);
-    expect((await db.records.get(['expense', a]))?.status).toBe('REQUIRES_RECONCILIATION');
-    expect((await db.records.get(['expense', b]))?.status).toBe('SYNCED');
+    expect((await db.records.get(['u1', 'expense', a]))?.status).toBe('REQUIRES_RECONCILIATION');
+    expect((await db.records.get(['u1', 'expense', b]))?.status).toBe('SYNCED');
     expect(syncStatusStore.get().needsAttention).toBe(1);
 
     // A later run still sends nothing for A.
@@ -314,8 +314,10 @@ describe('conflict, rejection, transient results', () => {
     const run = await engine.trigger('manual');
 
     expect(run).toMatchObject({ rejected: 2 });
-    expect((await db.records.get(['expense', failed]))?.status).toBe('FAILED');
-    expect((await db.records.get(['expense', locked]))?.status).toBe('REQUIRES_RECONCILIATION');
+    expect((await db.records.get(['u1', 'expense', failed]))?.status).toBe('FAILED');
+    expect((await db.records.get(['u1', 'expense', locked]))?.status).toBe(
+      'REQUIRES_RECONCILIATION',
+    );
     expect(await db.outbox.count()).toBe(2);
     expect((await db.outbox.toArray()).every((e) => e.state === 'REJECTED')).toBe(true);
   });
@@ -339,7 +341,7 @@ describe('conflict, rejection, transient results', () => {
       expect(server.pushes).toHaveLength(1);
       const [entry] = await db.outbox.toArray();
       expect(entry).toMatchObject({ state: 'PENDING', attempts: 1 });
-      expect((await db.records.get(['expense', id]))?.status).toBe('LOCAL_ONLY');
+      expect((await db.records.get(['u1', 'expense', id]))?.status).toBe('LOCAL_ONLY');
 
       server.pushHandler = (body) => body.mutations.map((m) => applied(server, m));
       const second = await engine.trigger('manual');
@@ -367,12 +369,12 @@ describe('conflict, rejection, transient results', () => {
 
     await retryEntry(db, createEntry?.mutationId ?? '');
     expect((await db.outbox.get(createEntry?.mutationId ?? ''))?.state).toBe('PENDING');
-    expect((await db.records.get(['expense', a]))?.status).toBe('LOCAL_ONLY');
+    expect((await db.records.get(['u1', 'expense', a]))?.status).toBe('LOCAL_ONLY');
 
     await engine.trigger('manual'); // rejected again
     await discardEntry(db, createEntry?.mutationId ?? '');
     expect(await db.outbox.count()).toBe(0);
-    expect(await db.records.get(['expense', a])).toBeUndefined();
+    expect(await db.records.get(['u1', 'expense', a])).toBeUndefined();
   });
 });
 
@@ -408,7 +410,7 @@ describe('ordering and batching', () => {
       [['UPDATE', 1]],
       [['UPDATE', 2]],
     ]);
-    expect(await db.records.get(['expense', id])).toMatchObject({
+    expect(await db.records.get(['u1', 'expense', id])).toMatchObject({
       version: 3,
       data: { amount: '10.00', note: 'two' },
       status: 'SYNCED',
@@ -525,7 +527,7 @@ describe('failures and backoff', () => {
     expect(BACKOFF_MS).toEqual([5_000, 30_000, 120_000, 600_000]);
     const stored = await db.outbox.get(entry.mutationId);
     expect(stored).toMatchObject({ state: 'PENDING', attempts: 5 });
-    expect((await db.records.get(['expense', entry.entityId]))?.status).toBe('LOCAL_ONLY');
+    expect((await db.records.get(['u1', 'expense', entry.entityId]))?.status).toBe('LOCAL_ONLY');
   });
 
   it('a successful run resets the backoff; the retry timer fires a run', async () => {
@@ -689,7 +691,7 @@ describe('pull', () => {
     expect(run).toMatchObject({ status: 'ok', pulled: 3 });
     expect(server.pulls.filter((p) => p.scope === 'mine').map((p) => p.cursor)).toEqual([0, 2]);
     expect(await db.records.count()).toBe(3);
-    expect(await db.records.get(['expense', c1.entityId])).toMatchObject({
+    expect(await db.records.get(['u1', 'expense', c1.entityId])).toMatchObject({
       version: 2,
       number: 'EXP-1',
       serverStatus: 'SUBMITTED',
@@ -732,8 +734,8 @@ describe('pull', () => {
 
     await engine.trigger('manual');
 
-    expect((await db.records.get(['expense', id]))?.data).toMatchObject({ amount: '10.00' });
-    expect(await db.serverShadow.get(['expense', id])).toMatchObject({
+    expect((await db.records.get(['u1', 'expense', id]))?.data).toMatchObject({ amount: '10.00' });
+    expect(await db.serverShadow.get(['u1', 'expense', id])).toMatchObject({
       version: 5,
       data: { amount: '99.00' },
     });
@@ -764,13 +766,13 @@ describe('pull', () => {
 
     await engine.trigger('manual');
     expect(await db.records.count()).toBe(2);
-    expect(await db.reference.get(['vehicle', ref.entityId])).toMatchObject({
+    expect(await db.reference.get(['u1', 'vehicle', ref.entityId])).toMatchObject({
       data: { name: 'MH-01' },
     });
 
     await engine.trigger('manual');
-    expect(await db.records.get(['expense', gone.entityId])).toBeUndefined();
-    expect(await db.records.get(['expense', keep.entityId])).toBeDefined();
+    expect(await db.records.get(['u1', 'expense', gone.entityId])).toBeUndefined();
+    expect(await db.records.get(['u1', 'expense', keep.entityId])).toBeDefined();
     expect(await db.reference.count()).toBe(0);
   });
 
@@ -849,5 +851,70 @@ describe('session change during a run', () => {
     expect(await db.records.count()).toBe(0);
     expect(await getMeta(db, META.cursor('mine', 'u1'))).toBeUndefined();
     expect(timers).toHaveLength(0); // not a failure: no backoff
+  });
+});
+
+describe('shared device', () => {
+  it('keeps each user records, shadows, reference rows and cursors apart', async () => {
+    const server = installServer();
+    const shared = uuidv7();
+    const row = (data: Record<string, unknown>) => ({
+      entityType: 'expense',
+      entityId: shared,
+      syncSeq: 1,
+      deleted: false,
+      data,
+    });
+    server.pullHandler = (scope, cursor) => {
+      if (scope === 'reference') {
+        return {
+          changes: [
+            {
+              entityType: 'vehicle',
+              entityId: shared,
+              syncSeq: 1,
+              deleted: false,
+              data: { id: 'v', owner: user },
+            },
+          ],
+          nextCursor: 1,
+          hasMore: false,
+        };
+      }
+      return cursor === 0
+        ? { changes: [row({ id: 'x', version: 1, owner: user })], nextCursor: 1, hasMore: false }
+        : { changes: [], nextCursor: cursor, hasMore: false };
+    };
+
+    await engine.trigger('manual'); // u1
+    user = 'u2';
+    await engine.trigger('manual'); // u2 starts from its own cursor 0 and gets its own rows
+
+    expect(await db.records.get(['u1', 'expense', shared])).toMatchObject({
+      data: { owner: 'u1' },
+    });
+    expect(await db.records.get(['u2', 'expense', shared])).toMatchObject({
+      data: { owner: 'u2' },
+    });
+    expect(await db.reference.get(['u1', 'vehicle', shared])).toMatchObject({
+      data: { owner: 'u1' },
+    });
+    expect(await db.reference.get(['u2', 'vehicle', shared])).toMatchObject({
+      data: { owner: 'u2' },
+    });
+    expect(await getMeta(db, META.cursor('mine', 'u1'))).toBe(1);
+    expect(await getMeta(db, META.cursor('mine', 'u2'))).toBe(1);
+    expect(await getMeta(db, META.cursor('reference', 'u2'))).toBe(1);
+  });
+
+  it('counts and status are per user: pending items of another user is not shown or touched', async () => {
+    installServer();
+    const id = uuidv7();
+    await create(id); // u1, never synced
+    user = 'u2';
+    await engine.trigger('manual');
+    expect(syncStatusStore.get().syncing).toBe(0);
+    expect(await db.records.get(['u2', 'expense', id])).toBeUndefined();
+    expect((await db.records.get(['u1', 'expense', id]))?.status).toBe('LOCAL_ONLY');
   });
 });
