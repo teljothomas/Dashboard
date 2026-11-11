@@ -43,10 +43,10 @@ Permission column uses §3 codes. "scope" is applied server-side to every list a
 ### identity (Phase 04)
 | Method | Path | Permission | Notes |
 |---|---|---|---|
-| POST | /auth/login | public, rate-limited | {username,password,deviceId} → sets cookie; returns user, permissions, csrfToken |
+| POST | /auth/login | public, rate-limited | {username,password,deviceId} → sets cookie; returns `{data:{user,roles,permissions:[{permission,scope,divisionId}],csrfToken}}`; generic 401 on any failure, 429 + `Retry-After` over the lockout limits |
 | POST | /auth/logout | session | revokes session |
 | GET | /auth/me | session | user, roles, permissions+scopes, csrfToken |
-| POST | /auth/change-password | session | {current,new} |
+| POST | /auth/change-password | session | {currentPassword,newPassword}; revokes the user's other sessions |
 | POST | /auth/reset/complete | public, rate-limited | {username,code,newPassword} |
 | GET/POST/PATCH | /users, /users/:id | users.manage | create, disable, assign roles |
 | POST | /users/:id/reset-code | users.manage | returns one-time code once (OD-032) |

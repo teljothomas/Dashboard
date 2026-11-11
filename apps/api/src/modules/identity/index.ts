@@ -25,3 +25,25 @@ export {
   type CreatedUser,
   type CreateOwnerInput,
 } from './users.js';
+export {
+  changePassword,
+  INVALID_CREDENTIALS_MESSAGE,
+  loadSessionInfo,
+  login,
+  LOGIN_MAX_FAILURES_PER_IP,
+  LOGIN_MAX_FAILURES_PER_USERNAME,
+  LOGIN_WINDOW_MINUTES,
+  logout,
+} from './auth.js';
+export { registerIdentityRoutes } from './routes.js';
+export {
+  ABSOLUTE_EXPIRY_DAYS,
+  csrfTokenFor,
+  hashToken,
+  IDLE_EXPIRY_DAYS,
+  loadGrants,
+  resolveSession,
+  revokeSession,
+  revokeUserSessions,
+  safeEqual,
+} from './sessions.js';

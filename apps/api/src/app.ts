@@ -8,11 +8,14 @@ import {
   registerAttachmentRoutes,
   type StorageAdapter,
 } from './modules/core/attachments/index.js';
+import { registerIdentityRoutes } from './modules/identity/routes.js';
 import { registerSyncRoutes } from './modules/sync/index.js';
+import { registerCsrf } from './plugins/csrf.js';
 import { registerErrorHandling } from './plugins/errorHandler.js';
 import { genRequestId, registerRequestId } from './plugins/requestId.js';
 import { registerRequestContext, type RequestContextProvider } from './plugins/requestContext.js';
 import { registerSecurityHeaders } from './plugins/securityHeaders.js';
+import { registerSession } from './plugins/session.js';
 
 /** Default request body limit (1 MB). Upload routes override later (SECURITY §5). */
 export const BODY_LIMIT_BYTES = 1_048_576;
@@ -25,8 +28,9 @@ export interface BuildAppOptions {
   /** Test hook: use this attachment store instead of `LocalFsStorage(config.ATTACHMENTS_DIR)`. */
   storage?: StorageAdapter;
   /**
-   * Registers hooks that set `request.ctx`. None in production until WP-04.3, so authenticated
-   * routes answer 401. Tests pass a provider from `apps/api/test/`.
+   * Test hook: replaces the session plugin (and with it the CSRF check and the `/auth` routes)
+   * with a provider from `apps/api/test/` that sets `request.ctx` from headers. Production
+   * never passes it.
    */
   requestContext?: RequestContextProvider;
 }
@@ -63,7 +67,11 @@ export function buildApp(config: AppConfig, options: BuildAppOptions = {}): Fast
     });
   }
 
-  registerRequestContext(app, options.requestContext);
+  registerRequestContext(app, options.requestContext ?? ((a) => registerSession(a, config)));
+  if (!options.requestContext) {
+    registerCsrf(app);
+    registerIdentityRoutes(app, config);
+  }
   registerSyncRoutes(app);
   registerAttachmentRoutes(app, {
     storage: options.storage ?? new LocalFsStorage(config.ATTACHMENTS_DIR),

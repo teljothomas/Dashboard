@@ -38,6 +38,10 @@ export function registerErrorHandling(app: FastifyInstance): void {
   app.setErrorHandler((error: FastifyError | AppError | ZodError, request, reply) => {
     if (error instanceof AppError) {
       request.log.info({ code: error.code }, 'request failed');
+      const retryAfter = error.details?.retryAfterSeconds;
+      if (error.code === 'RATE_LIMITED' && typeof retryAfter === 'number') {
+        void reply.header('Retry-After', String(retryAfter));
+      }
       return reply
         .code(error.httpStatus)
         .send(toEnvelope(error.code, error.message, request.id, error.details));

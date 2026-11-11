@@ -4,22 +4,22 @@ Project: Meat Trading, Processing & Logistics ERP (working name: TradeX ERP)
 Current release: none
 Project state: FOUNDATION_IN_PROGRESS
 Application coding: STARTED (Phase 02 foundation packages and apps exist)
-Current stage: READY (WP-04.1 done; WP-04.2 next)
-Current phase: PHASE-04 (1/6)
-Current task: WP-04.2
+Current stage: READY (WP-04.2 done; WP-04.3 next)
+Current phase: PHASE-04 (2/6)
+Current task: WP-04.3
 Assigned model: Sonnet 5.5
 Last updated: 2026-11-11
-Last verified commit: WP-04.1 commit on main (`git log --oneline`)
-Next action: WP-04.2
+Last verified commit: WP-04.2 commit on main (`git log --oneline`)
+Next action: WP-04.3
 
 ## CURRENT POSITION
 
 Stage: READY
 Phase: PHASE-04 Authentication and permissions
-Task ID: WP-04.2
+Task ID: WP-04.3
 Task status: NOT_STARTED
-Branch: main (pushed to origin 2026-11-11, owner approved; later pushes still need approval, so Phase 03 commits after that push are local only)
-Last completed work unit: WP-04.1 identity schema, seeds, owner bootstrap (Sonnet 5.5, 2026-11-11)
+Branch: main (pushed to origin 2026-11-11, owner approved; later pushes still need approval, so commits after that push are local only)
+Last completed work unit: WP-04.2 login, sessions, CSRF, rate limiting (Sonnet 5.5, 2026-11-11)
 
 ## PHASE TRACKER
 
@@ -31,7 +31,7 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | 01 | Architecture and contracts | COMPLETE | Baseline v1.0 (WP-01.R / 01.X run on demand) |
 | 02 | Application foundation | COMPLETE | 5/5 (gate passed 2026-11-11) |
 | 03 | Database and core services | COMPLETE | 6/6 (gate passed 2026-11-11) |
-| 04 | Authentication and permissions | IN_PROGRESS | 1/6 |
+| 04 | Authentication and permissions | IN_PROGRESS | 2/6 |
 | 05 | Tally connector read | NOT_STARTED | 0/9 |
 | 06 | Meat trading and inventory | NOT_STARTED | 0/6 |
 | 07 | Factory and labour | NOT_STARTED | 0/5 |
@@ -66,15 +66,16 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | WP-03.5 follow-ups | Security review: (1) session user change mid-run stops the sync run (`session-changed`), checked before each push send and after each pull response; (2) offline records, serverShadow, reference rows and pull cursors keyed per user, outbox filtered by userId, schema v1 edited in place (nothing shipped) | web 105 pass; lint, typecheck, prettier clean | 74a8cd8, 77154dd |
 | WP-03.6 | Phase 03 gate: full suite, migrations on an empty DB (0001..0003 apply, second run no-op), build, e2e, audit; QUALITY_GATES `db:migrate` and `test:integration` VERIFIED | domain 57, contracts 40, api 69, web 105; integration 150 (x2); e2e 1; build 147.48 KB gzip; audit clean | WP-03.6 commit |
 | WP-04.1 | Identity: migration `0004_identity.sql` (app_user, role, permission, role_permission, user_role, device, session, password_reset, login_attempt; FKs client_mutation.device_id and sync_conflict.device_id to device), `modules/identity` (42-permission catalogue, six system roles, default matrix, insert-only idempotent `seedIdentity`, argon2id password module with policy, `createOwner`), CLI `user:create-owner` (hidden input; stdin only when NODE_ENV=test) | unit api 81 (12 new); integration 167 (17 new, incl. CLI subprocess); lint, typecheck, prettier, build clean; audit clean | WP-04.1 commit |
+| WP-04.2 | Auth: `POST /auth/login`, `/auth/logout`, `GET /auth/me`, `POST /auth/change-password`; session plugin sets `request.ctx` (roles, grants, deviceId, csrfToken), HMAC double-submit CSRF, DB-derived lockout (5/user, 20/IP per 15 min) + in-memory request limiter, device auto-registration, must-change-password gate, contracts `identity.ts` | unit api 90 (9 new), contracts 40, web 105; integration 196 (29 new), 5 clean full runs (1 earlier unidentified failure, not reproduced); lint, typecheck, prettier, build clean; audit clean | WP-04.2 commit |
 
 ## ACTIVE TASK
 
-Objective: WP-04.2 login, sessions, CSRF, rate limiting.
+Objective: WP-04.3 authorization and scopes.
 Assigned agent: Sonnet 5.5
-Required prompt: prompts/phases/PHASE-04-AUTHENTICATION-PERMISSIONS.md -> WP-04.2
-Required context files: SECURITY §2, §4; INTERFACES §2 identity rows; DECISIONS ADR-050/051
-Allowed modifications: `apps/api/src/plugins/session.ts`, `csrf.ts`, `rateLimit.ts`, `modules/identity/**`, `packages/contracts/src/identity.ts`
-Acceptance criteria: per WP-04.2
+Required prompt: prompts/phases/PHASE-04-AUTHENTICATION-PERMISSIONS.md -> WP-04.3
+Required context files: INTERFACES §3; SECURITY §3
+Allowed modifications: `apps/api/src/plugins/authorize.ts`, `apps/api/src/lib/scope.ts`, `apps/api/test/routes.inventory.test.ts`, retrofit of attachments and sync routes (plus the carried attachment-dedupe blocker if the owner decides)
+Acceptance criteria: per WP-04.3
 
 ## OPEN BLOCKERS
 
@@ -91,6 +92,10 @@ Acceptance criteria: per WP-04.2
 - Later protected operations: VPS purchase/domain (Phase 14), production deploy, live data import, production posting enable (Phase 15).
 
 ## QUALITY GATE
+
+WP-04.2 (executed 2026-11-11):
+- Lint: pass; Typecheck: pass (4 packages); Prettier: pass; Unit: pass (api 90, 9 new; contracts 40; web 105); Integration: 196 pass (29 new), 5 consecutive full runs clean after one earlier full run with 1 unidentified failure; Build: pass; `pnpm audit --prod`: no known vulnerabilities
+- Not run: e2e (web untouched), security suite, secret scan, `db:migrate` (no migration)
 
 WP-04.1 (executed 2026-11-11):
 - Lint: pass; Typecheck: pass; Prettier: pass; Unit: pass (api 81, 12 new); Integration: 167 pass (17 new; sync tests updated for the device FK); Build: pass; `db:migrate` applied 0004 on the dev DB; `pnpm audit --prod`: no known vulnerabilities
@@ -126,13 +131,13 @@ Phase 02 gate (WP-02.5):
 
 ## NEXT EXACT ACTION
 
-Task ID: WP-04.2
+Task ID: WP-04.3
 Phase prompt: prompts/phases/PHASE-04-AUTHENTICATION-PERMISSIONS.md
 Model: Sonnet 5.5 (Haiku: no)
-Context: SECURITY §2, §4; INTERFACES §2 identity rows; DECISIONS ADR-050/051
-Objective: `POST /auth/login`, `/auth/logout`, `GET /auth/me`, `POST /auth/change-password`; session plugin populating `request.ctx` (replaces the Phase 03 seam); CSRF double-submit; rate limiting and lockout.
-Expected output: `plugins/session.ts`, `csrf.ts`, `rateLimit.ts`, `modules/identity` routes and services, `packages/contracts/src/identity.ts`.
-Tests: login success/failure, lockout after 5, IP limit, logout revokes, absolute expiry, CSRF missing 403, password change revokes other sessions, no token or password in logs.
-Carried blocker: attachment dedupe by sha256 and `core.attachments.link` actor check land in Phase 04 (with WP-04.3).
-Notes from 04.1: `modules/identity` already exports `hashPassword`, `verifyPassword`, `needsRehash`, `checkPasswordPolicy`, `seedIdentity`, `createOwner`, the `Permission`/`Scope` types and `defaultGrants`. Devices are not auto-registered yet: push into `client_mutation` now fails the device FK for an unknown device, so WP-04.2 must register the device (row in `device`, owner = session user) on the first authenticated request. `client_mutation.user_id`/`sync_conflict.user_id` have no FK yet. `COMMON_PASSWORDS` is a short hand-written list (replace with top-10k before go-live). Seed runs on install via `user:create-owner`; later permission additions need `seedIdentity` re-run. Notes from 03.5: `startOfflineRuntime()` is not called from `main.tsx`; Phase 04 must set `sessionStore.userId` on login and call `engine.resume()` after a 401 re-login.
-After this: WP-04.3
+Context: INTERFACES §3; SECURITY §3
+Objective: `authorize(permission, {scope})` route option; `scopeWhere` Kysely helper; `assertNotSelf`; route inventory test (every non-public route declares a permission and returns 401 without a session); retrofit attachments and sync routes with permissions and scopes.
+Expected output: `plugins/authorize.ts`, `lib/scope.ts`, `test/routes.inventory.test.ts`, retrofit diffs.
+Tests: authorization allow/deny per scope, self-approval guard, route inventory fails for a route without a permission declaration.
+Carried blocker: attachment dedupe by sha256 (second uploader gets the first user's id) and `core.attachments.link` actor check; recommended `UNIQUE (sha256, uploaded_by)` plus link checking uploader or `canRead` (DATA_MODEL change; see OPEN BLOCKERS).
+Notes from 04.2: `request.ctx` now has `permissions` (codes), `grants` (`{permission, scope, divisionId}` per role assignment), `roles`, `sessionId`, `csrfToken`, `mustChangePassword`. The session plugin is used unless a test passes `requestContext` (`headerContextProvider`: no CSRF, no `/auth` routes). Route-level CSRF exemption is `config: { csrfExempt: true }`. Public allowlist for the inventory test: `/health`, `/api/v1/auth/login`, `/api/v1/auth/reset/complete` (WP-04.4), `/connector/*`. `/auth/logout`, `/auth/me`, `/auth/change-password` need a session but no permission code (declare them session-only in the inventory). `request.ip` ignores proxies (set `trustProxy` in Phase 14). Admin unlock in WP-04.4 must clear or supersede recent `login_attempt` failures (lock is derived from them; `app_user.locked_until` is unused). `COMMON_PASSWORDS` is a short list (replace before go-live). `startOfflineRuntime()` is still not called from `main.tsx`; WP-04.5 sets `sessionStore.userId` on login, calls `engine.resume()` after re-login, and must send `X-CSRF-Token` and `X-Device-Id` on mutations.
+After this: WP-04.4

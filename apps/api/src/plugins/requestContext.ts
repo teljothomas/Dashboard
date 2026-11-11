@@ -1,12 +1,23 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { PermissionGrantDto } from '@tradex/contracts';
 import { AppError } from '../errors.js';
 import type { ActorContext } from '../modules/core/context.js';
 
-/** Who is calling, as established by the auth layer (Phase 04, WP-04.3). */
+/** Who is calling, as established by the session plugin (WP-04.2). */
 export interface RequestContext {
   userId: string;
   deviceId: string | null;
+  /** Distinct permission codes the user holds (any scope). */
   permissions: readonly string[];
+  /** Role codes assigned to the user. */
+  roles: readonly string[];
+  /** One entry per (assignment, permission): code, scope and the assignment's division limiter. */
+  grants: readonly PermissionGrantDto[];
+  /** Null for providers that do not use sessions (tests). */
+  sessionId: string | null;
+  /** Session-bound CSRF token, null for providers that do not use sessions. */
+  csrfToken: string | null;
+  mustChangePassword: boolean;
 }
 
 declare module 'fastify' {
@@ -18,8 +29,8 @@ declare module 'fastify' {
 
 /**
  * A provider registers hooks that set `request.ctx` (an `onRequest` hook that validates the
- * session). Production `buildApp` passes none until WP-04.3, so every route that calls
- * `requireContext` answers 401. Tests pass a test-only provider from `apps/api/test/`.
+ * session). Production uses the session plugin (`plugins/session.ts`); tests may pass a
+ * header-based provider from `apps/api/test/` instead.
  */
 export type RequestContextProvider = (app: FastifyInstance) => void;
 
