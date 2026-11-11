@@ -14,3 +14,6 @@ playwright-report
 test-results
 .DS_Store
 *.log
+
+# Local attachment store (dev)
+.data/

@@ -35,18 +35,19 @@ afterAll(async () => {
 
 describe('migration runner', () => {
   it('applies on an empty database, then a second run is a no-op', async () => {
+    const names = (await loadMigrations(MIGRATIONS_DIR)).map((m) => m.name);
     const first = await runMigrations(urls.owner, MIGRATIONS_DIR);
-    expect(first.applied).toEqual(['0001_core.sql']);
+    expect(first.applied).toEqual(names);
     expect(first.alreadyApplied).toBe(0);
 
     const second = await runMigrations(urls.owner, MIGRATIONS_DIR);
     expect(second.applied).toEqual([]);
-    expect(second.alreadyApplied).toBe(1);
+    expect(second.alreadyApplied).toBe(names.length);
 
     const { rows } = await ownerQuery<{ version: number; name: string; checksum: string }>(
       'SELECT version, name, checksum FROM schema_migration',
     );
-    expect(rows).toHaveLength(1);
+    expect(rows.map((r) => r.name)).toEqual(names);
     expect(rows[0]?.name).toBe('0001_core.sql');
     expect(rows[0]?.checksum.trim()).toMatch(/^[0-9a-f]{64}$/);
   });
@@ -119,7 +120,7 @@ describe('migration runner', () => {
       runMigrations(urls.owner, MIGRATIONS_DIR),
     ]);
     const appliedTotal = results.reduce((n, r) => n + r.applied.length, 0);
-    expect(appliedTotal).toBe(1);
+    expect(appliedTotal).toBe((await loadMigrations(MIGRATIONS_DIR)).length);
   });
 
   it('keeps schema_migration unreadable for the app role', async () => {

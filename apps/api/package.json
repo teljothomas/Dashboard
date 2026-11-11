@@ -14,12 +14,14 @@
     "db:codegen": "kysely-codegen --env-file=.env \"--url=env(DATABASE_URL_MIGRATE)\" --dialect=postgres --out-file=src/db/generated.ts"
   },
   "dependencies": {
+    "@fastify/multipart": "^10.1.8",
     "@tradex/contracts": "workspace:*",
     "@tradex/domain": "workspace:*",
     "fastify": "^5.12.8",
     "kysely": "^0.29.8",
     "pg": "^8.23.1",
     "pino": "^10.4.0",
+    "sharp": "^0.35.5",
     "zod": "^4.6.7"
   },
   "devDependencies": {

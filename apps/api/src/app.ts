@@ -3,8 +3,14 @@ import type { Writable } from 'node:stream';
 import type { AppConfig } from './config.js';
 import { createDatabase, isDatabaseHealthy, type Database } from './db/index.js';
 import { loggerOptions } from './logger.js';
+import {
+  LocalFsStorage,
+  registerAttachmentRoutes,
+  type StorageAdapter,
+} from './modules/core/attachments/index.js';
 import { registerErrorHandling } from './plugins/errorHandler.js';
 import { genRequestId, registerRequestId } from './plugins/requestId.js';
+import { registerRequestContext, type RequestContextProvider } from './plugins/requestContext.js';
 import { registerSecurityHeaders } from './plugins/securityHeaders.js';
 
 /** Default request body limit (1 MB). Upload routes override later (SECURITY §5). */
@@ -15,6 +21,13 @@ export interface BuildAppOptions {
   logStream?: Writable;
   /** Test hook: use this database instead of creating one from `config.DATABASE_URL`. */
   db?: Database;
+  /** Test hook: use this attachment store instead of `LocalFsStorage(config.ATTACHMENTS_DIR)`. */
+  storage?: StorageAdapter;
+  /**
+   * Registers hooks that set `request.ctx`. None in production until WP-04.3, so authenticated
+   * routes answer 401. Tests pass a provider from `apps/api/test/`.
+   */
+  requestContext?: RequestContextProvider;
 }
 
 declare module 'fastify' {
@@ -48,6 +61,11 @@ export function buildApp(config: AppConfig, options: BuildAppOptions = {}): Fast
       await db.destroy();
     });
   }
+
+  registerRequestContext(app, options.requestContext);
+  registerAttachmentRoutes(app, {
+    storage: options.storage ?? new LocalFsStorage(config.ATTACHMENTS_DIR),
+  });
 
   // Runs SELECT 1; reports status only (no version or host details, SECURITY).
   app.get('/health', async (_request, reply) => {

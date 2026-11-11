@@ -35,6 +35,28 @@ export interface AppSetting {
   version: Generated<number>;
 }
 
+export interface Attachment {
+  created_at: Generated<Timestamp>;
+  device_id: string | null;
+  id: string;
+  mime: string;
+  original_name: string;
+  scanned_ok: Generated<boolean>;
+  sha256: string;
+  size_bytes: Int8;
+  storage_key: string;
+  uploaded_by: string;
+}
+
+export interface AttachmentLink {
+  attachment_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  entity_id: string;
+  entity_type: string;
+  role: string;
+}
+
 export interface AuditLog {
   action: string;
   actor_agent_id: string | null;
@@ -124,6 +146,8 @@ export interface SchemaMigration {
 
 export interface DB {
   app_setting: AppSetting;
+  attachment: Attachment;
+  attachment_link: AttachmentLink;
   audit_log: AuditLog;
   division: Division;
   job: Job;
