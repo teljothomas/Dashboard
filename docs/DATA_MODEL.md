@@ -43,6 +43,10 @@ Opus-approved note in DECISIONS.md.
 - `password_reset` — user_id, code_hash, expires_at (30 min), used_at, issued_by.
 - `device` — id (client uuid), user_id, label, platform, first_seen_at, last_sync_at, revoked_at.
 - `login_attempt` — username, ip, at, success (for rate limiting/forensics; 90-day retention).
+- Implemented in `0004_identity.sql` (WP-04.1). Additions: `id` (uuid v7) on `user_role`, `session`, `password_reset`;
+  `login_attempt.id` bigint identity; `device.user_id` NOT NULL; `user_role.division_id` NULL = no limiter (unique per
+  user, role, division with NULL as one value); trigger blocks deleting a system role or changing its code. The
+  permission catalogue, system roles and default matrix are seeded by `seedIdentity()` (insert only), not by the migration.
 
 ## 3. Offline sync (Phase 03, hardened 12)
 
@@ -54,7 +58,7 @@ Opus-approved note in DECISIONS.md.
   `RESOLVED_MERGED`), resolved_by, resolved_at, note.
 - Implemented in `0003_sync.sql` (WP-03.4). Additions to the lists above: `client_mutation.payload_hash`
   (sha256 of the canonical mutation, detects a reused mutation_id), `client_created_at`; `sync_conflict.id` (uuid v7),
-  `mutation_id` (unique FK), `op`, `reason`, `resolved_values`. `device_id`/`user_id` are plain uuids until WP-04.1 adds FKs.
+  `mutation_id` (unique FK), `op`, `reason`, `resolved_values`. `device_id` has FKs to `device` since `0004_identity.sql` (WP-04.1); `user_id` stays a plain uuid (no FK yet).
 
 ## 4. Tally mirror and connector (Phase 05; posting tables Phase 11)
 

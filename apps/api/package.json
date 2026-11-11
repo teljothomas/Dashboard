@@ -10,11 +10,13 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",
+    "user:create-owner": "tsx --env-file-if-exists=.env src/cli/create-owner.ts",
     "db:migrate": "tsx --env-file-if-exists=.env src/db/migrate-cli.ts",
     "db:codegen": "kysely-codegen --env-file=.env \"--url=env(DATABASE_URL_MIGRATE)\" --dialect=postgres --out-file=src/db/generated.ts"
   },
   "dependencies": {
     "@fastify/multipart": "^10.1.8",
+    "@node-rs/argon2": "^2.2.2",
     "@tradex/contracts": "workspace:*",
     "@tradex/domain": "workspace:*",
     "fastify": "^5.12.8",

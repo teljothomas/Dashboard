@@ -3,6 +3,7 @@ import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import pg from 'pg';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { MIGRATIONS_DIR, resetDatabase, testDbUrls, truncateAll } from '../../../test/db.js';
+import { insertTestIdentity } from '../../../test/identity.js';
 import { headerContextProvider } from '../../../test/requestContext.js';
 import { createSyncTestTables, registerTestEntities } from '../../../test/syncEntities.js';
 import { buildApp } from '../../app.js';
@@ -33,6 +34,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await truncateAll(urls);
+  await insertTestIdentity(owner, [USER, OTHER], [DEVICE]);
   clearEntities();
   registerTestEntities();
   app = buildApp(testConfig, { db, requestContext: headerContextProvider });

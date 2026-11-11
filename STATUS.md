@@ -4,22 +4,22 @@ Project: Meat Trading, Processing & Logistics ERP (working name: TradeX ERP)
 Current release: none
 Project state: FOUNDATION_IN_PROGRESS
 Application coding: STARTED (Phase 02 foundation packages and apps exist)
-Current stage: READY (Phase 03 gate passed; WP-04.1 next)
-Current phase: PHASE-04 (0/6)
-Current task: WP-04.1
+Current stage: READY (WP-04.1 done; WP-04.2 next)
+Current phase: PHASE-04 (1/6)
+Current task: WP-04.2
 Assigned model: Sonnet 5.5
 Last updated: 2026-11-11
-Last verified commit: WP-03.6 gate commit on main (`git log --oneline`)
-Next action: WP-04.1
+Last verified commit: WP-04.1 commit on main (`git log --oneline`)
+Next action: WP-04.2
 
 ## CURRENT POSITION
 
 Stage: READY
 Phase: PHASE-04 Authentication and permissions
-Task ID: WP-04.1
+Task ID: WP-04.2
 Task status: NOT_STARTED
 Branch: main (pushed to origin 2026-11-11, owner approved; later pushes still need approval, so Phase 03 commits after that push are local only)
-Last completed work unit: WP-03.6 Phase 03 gate (Sonnet 5.5, 2026-11-11)
+Last completed work unit: WP-04.1 identity schema, seeds, owner bootstrap (Sonnet 5.5, 2026-11-11)
 
 ## PHASE TRACKER
 
@@ -31,7 +31,7 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | 01 | Architecture and contracts | COMPLETE | Baseline v1.0 (WP-01.R / 01.X run on demand) |
 | 02 | Application foundation | COMPLETE | 5/5 (gate passed 2026-11-11) |
 | 03 | Database and core services | COMPLETE | 6/6 (gate passed 2026-11-11) |
-| 04 | Authentication and permissions | NOT_STARTED | 0/6 |
+| 04 | Authentication and permissions | IN_PROGRESS | 1/6 |
 | 05 | Tally connector read | NOT_STARTED | 0/9 |
 | 06 | Meat trading and inventory | NOT_STARTED | 0/6 |
 | 07 | Factory and labour | NOT_STARTED | 0/5 |
@@ -65,15 +65,16 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | WP-03.5 | Client offline core in `apps/web/src/offline`: Dexie schema v1 per OFFLINE_DESIGN 3 + device id bootstrap, outbox (enqueue in one tx with the local record, FIFO, one entry per record per batch, delete only on APPLIED), sync engine (single flight with Web Locks, push 50 then pull mine/reference, backoff 5 s to 10 min, 401 pause/resume, storage warning), BR-301 `deriveSyncStatus`, `useOfflineMutation`, `SyncStatusChip`, banner paused/low-storage | web 102 pass (82 new), domain 57, contracts 40, api 69; lint, typecheck, prettier, build clean (initial JS 147.48 KB gzip); e2e 1 pass; audit clean | WP-03.5 commit |
 | WP-03.5 follow-ups | Security review: (1) session user change mid-run stops the sync run (`session-changed`), checked before each push send and after each pull response; (2) offline records, serverShadow, reference rows and pull cursors keyed per user, outbox filtered by userId, schema v1 edited in place (nothing shipped) | web 105 pass; lint, typecheck, prettier clean | 74a8cd8, 77154dd |
 | WP-03.6 | Phase 03 gate: full suite, migrations on an empty DB (0001..0003 apply, second run no-op), build, e2e, audit; QUALITY_GATES `db:migrate` and `test:integration` VERIFIED | domain 57, contracts 40, api 69, web 105; integration 150 (x2); e2e 1; build 147.48 KB gzip; audit clean | WP-03.6 commit |
+| WP-04.1 | Identity: migration `0004_identity.sql` (app_user, role, permission, role_permission, user_role, device, session, password_reset, login_attempt; FKs client_mutation.device_id and sync_conflict.device_id to device), `modules/identity` (42-permission catalogue, six system roles, default matrix, insert-only idempotent `seedIdentity`, argon2id password module with policy, `createOwner`), CLI `user:create-owner` (hidden input; stdin only when NODE_ENV=test) | unit api 81 (12 new); integration 167 (17 new, incl. CLI subprocess); lint, typecheck, prettier, build clean; audit clean | WP-04.1 commit |
 
 ## ACTIVE TASK
 
-Objective: WP-04.1 identity schema, seeds, owner bootstrap.
+Objective: WP-04.2 login, sessions, CSRF, rate limiting.
 Assigned agent: Sonnet 5.5
-Required prompt: prompts/phases/PHASE-04-AUTHENTICATION-PERMISSIONS.md -> WP-04.1
-Required context files: DATA_MODEL §2; INTERFACES §3
-Allowed modifications: migration `0004_identity.sql`, `apps/api/src/modules/identity/**`, `apps/api/src/cli/create-owner.ts`, api package script `user:create-owner`
-Acceptance criteria: per WP-04.1
+Required prompt: prompts/phases/PHASE-04-AUTHENTICATION-PERMISSIONS.md -> WP-04.2
+Required context files: SECURITY §2, §4; INTERFACES §2 identity rows; DECISIONS ADR-050/051
+Allowed modifications: `apps/api/src/plugins/session.ts`, `csrf.ts`, `rateLimit.ts`, `modules/identity/**`, `packages/contracts/src/identity.ts`
+Acceptance criteria: per WP-04.2
 
 ## OPEN BLOCKERS
 
@@ -90,6 +91,10 @@ Acceptance criteria: per WP-04.1
 - Later protected operations: VPS purchase/domain (Phase 14), production deploy, live data import, production posting enable (Phase 15).
 
 ## QUALITY GATE
+
+WP-04.1 (executed 2026-11-11):
+- Lint: pass; Typecheck: pass; Prettier: pass; Unit: pass (api 81, 12 new); Integration: 167 pass (17 new; sync tests updated for the device FK); Build: pass; `db:migrate` applied 0004 on the dev DB; `pnpm audit --prod`: no known vulnerabilities
+- Not run: e2e and web/domain/contracts suites (untouched), security suite, secret scan
 
 Phase 03 gate (WP-03.6, executed 2026-11-11):
 - Lint: pass; Typecheck: pass (4 packages); Prettier: pass; Unit: pass (domain 57, contracts 40, api 69, web 105); Integration: 150 pass (2 runs); `db:migrate` on empty DB: applied 0001, 0002, 0003, then no pending; Build: pass (web initial JS 147.48 KB gzip); E2E: 1 pass; `pnpm audit --prod`: no known vulnerabilities
@@ -121,13 +126,13 @@ Phase 02 gate (WP-02.5):
 
 ## NEXT EXACT ACTION
 
-Task ID: WP-04.1
+Task ID: WP-04.2
 Phase prompt: prompts/phases/PHASE-04-AUTHENTICATION-PERMISSIONS.md
-Model: Sonnet 5.5 (permission seed transcription from INTERFACES §3 is Haiku-eligible)
-Context: DATA_MODEL §2; INTERFACES §3
-Objective: Identity schema, seeds, owner bootstrap. Migration `0004_identity.sql` (app_user, role, permission, role_permission, user_role, session, password_reset, device, login_attempt; FK client_mutation.device_id to device), idempotent seed of the permission catalogue and six system roles, CLI `user:create-owner`.
-Expected output: migration, `modules/identity/**`, `cli/create-owner.ts`, package script `user:create-owner`.
-Tests: migration + seed idempotent (integration); CLI creates owner in test DB (password via stdin in test mode only); lint, typecheck, prettier.
+Model: Sonnet 5.5 (Haiku: no)
+Context: SECURITY §2, §4; INTERFACES §2 identity rows; DECISIONS ADR-050/051
+Objective: `POST /auth/login`, `/auth/logout`, `GET /auth/me`, `POST /auth/change-password`; session plugin populating `request.ctx` (replaces the Phase 03 seam); CSRF double-submit; rate limiting and lockout.
+Expected output: `plugins/session.ts`, `csrf.ts`, `rateLimit.ts`, `modules/identity` routes and services, `packages/contracts/src/identity.ts`.
+Tests: login success/failure, lockout after 5, IP limit, logout revokes, absolute expiry, CSRF missing 403, password change revokes other sessions, no token or password in logs.
 Carried blocker: attachment dedupe by sha256 and `core.attachments.link` actor check land in Phase 04 (with WP-04.3).
-Notes from 03.5: `startOfflineRuntime()` (offline/runtime.ts) is not called from `main.tsx` yet; Phase 04 must set `sessionStore.userId` on login and call `engine.resume()` after a 401 re-login. A persistent DUPLICATE_SUSPECTED keeps its outbox entry PENDING with `lastError` set and is resent every run (no UI yet). Attachment upload step in the engine is a placeholder (entries with `dependsOn` wait). Conflict screen, Settings sync page and JSON export of pending items are not built (Phase 12 hardening). Pull `data` is read as `{ version, status, number, syncStatus }` (see `readServerFields`); entity handlers must serialize those fields.
-After this: WP-04.2
+Notes from 04.1: `modules/identity` already exports `hashPassword`, `verifyPassword`, `needsRehash`, `checkPasswordPolicy`, `seedIdentity`, `createOwner`, the `Permission`/`Scope` types and `defaultGrants`. Devices are not auto-registered yet: push into `client_mutation` now fails the device FK for an unknown device, so WP-04.2 must register the device (row in `device`, owner = session user) on the first authenticated request. `client_mutation.user_id`/`sync_conflict.user_id` have no FK yet. `COMMON_PASSWORDS` is a short hand-written list (replace with top-10k before go-live). Seed runs on install via `user:create-owner`; later permission additions need `seedIdentity` re-run. Notes from 03.5: `startOfflineRuntime()` is not called from `main.tsx`; Phase 04 must set `sessionStore.userId` on login and call `engine.resume()` after a 401 re-login.
+After this: WP-04.3

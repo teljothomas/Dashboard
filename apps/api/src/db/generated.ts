@@ -35,6 +35,24 @@ export interface AppSetting {
   version: Generated<number>;
 }
 
+export interface AppUser {
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  display_name: string;
+  failed_logins: Generated<number>;
+  id: string;
+  last_login_at: Timestamp | null;
+  locked_until: Timestamp | null;
+  must_change_password: Generated<boolean>;
+  password_hash: string;
+  phone: string | null;
+  status: Generated<string>;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+  username: string;
+  version: Generated<number>;
+}
+
 export interface Attachment {
   created_at: Generated<Timestamp>;
   device_id: string | null;
@@ -87,6 +105,16 @@ export interface ClientMutation {
   user_id: string;
 }
 
+export interface Device {
+  first_seen_at: Generated<Timestamp>;
+  id: string;
+  label: string | null;
+  last_sync_at: Timestamp | null;
+  platform: string | null;
+  revoked_at: Timestamp | null;
+  user_id: string;
+}
+
 export interface Division {
   code: string;
   created_at: Generated<Timestamp>;
@@ -114,6 +142,14 @@ export interface Job {
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
   version: Generated<number>;
+}
+
+export interface LoginAttempt {
+  at: Generated<Timestamp>;
+  id: Generated<Int8>;
+  ip: string | null;
+  success: boolean;
+  username: string;
 }
 
 export interface Notification {
@@ -152,11 +188,59 @@ export interface OwnerApproval {
   subject: Generated<Json>;
 }
 
+export interface PasswordReset {
+  code_hash: string;
+  created_at: Generated<Timestamp>;
+  expires_at: Timestamp;
+  id: string;
+  issued_by: string;
+  used_at: Timestamp | null;
+  user_id: string;
+}
+
+export interface Permission {
+  code: string;
+  created_at: Generated<Timestamp>;
+}
+
+export interface Role {
+  code: string;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  id: string;
+  is_system: Generated<boolean>;
+  name: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+  version: Generated<number>;
+}
+
+export interface RolePermission {
+  created_at: Generated<Timestamp>;
+  permission_code: string;
+  role_id: string;
+  scope: string;
+}
+
 export interface SchemaMigration {
   applied_at: Generated<Timestamp>;
   checksum: string;
   name: string;
   version: number;
+}
+
+export interface Session {
+  absolute_expires_at: Timestamp;
+  created_at: Generated<Timestamp>;
+  device_id: string | null;
+  expires_at: Timestamp;
+  id: string;
+  ip: string | null;
+  last_seen_at: Generated<Timestamp>;
+  revoked_at: Timestamp | null;
+  token_hash: string;
+  user_agent: string | null;
+  user_id: string;
 }
 
 export interface SyncConflict {
@@ -180,17 +264,35 @@ export interface SyncConflict {
   user_id: string;
 }
 
+export interface UserRole {
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  division_id: string | null;
+  id: string;
+  role_id: string;
+  user_id: string;
+}
+
 export interface DB {
   app_setting: AppSetting;
+  app_user: AppUser;
   attachment: Attachment;
   attachment_link: AttachmentLink;
   audit_log: AuditLog;
   client_mutation: ClientMutation;
+  device: Device;
   division: Division;
   job: Job;
+  login_attempt: LoginAttempt;
   notification: Notification;
   number_sequence: NumberSequence;
   owner_approval: OwnerApproval;
+  password_reset: PasswordReset;
+  permission: Permission;
+  role: Role;
+  role_permission: RolePermission;
   schema_migration: SchemaMigration;
+  session: Session;
   sync_conflict: SyncConflict;
+  user_role: UserRole;
 }
