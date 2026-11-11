@@ -18,7 +18,7 @@ Stage: READY_FOR_SONNET_IMPLEMENTATION
 Phase: PHASE-00 Governance, discovery and project readiness
 Task ID: WP-02.1
 Task status: READY
-Branch: main (remote origin recorded, not pushed)
+Branch: main (pushed to origin 2026-11-11, owner approved; later pushes still need approval)
 Last completed work unit: WP-00.4 (toolchain record + Phase 00 gate, Sonnet 5.5)
 
 ## PHASE TRACKER
@@ -70,7 +70,7 @@ None for Phase 00–04.
 ## OWNER APPROVAL REQUIRED
 
 - Answer docs/discovery/*.md (non-blocking until Phase 05.7/11/15): TALLY_DISCOVERY.md (owner/Tally PC), OWNER_QUESTIONS.md (owner), CA_QUESTIONS.md (CA). Register: docs/OPEN_DECISIONS.md.
-- Owner to decide whether to push `main` to https://github.com/teljothomas/Dashboard.git (remote recorded; no push until approved, ADR-063).
+- Pushing: owner approved first push 2026-11-11 (main → origin). Further pushes need approval per ADR-063.
 - Engage a CA/accountant for ACCT decisions (OD-010..022, OD-033, OD-047, OD-048) before Phase 11 production work.
 - Start Docker Desktop (daemon verified NOT running 2026-11-11; CLI 28.4.0 present) — needed by WP-02.4.
 - Install .NET 10 SDK on the dev PC (verified absent 2026-11-11) — needed by WP-05.0.
