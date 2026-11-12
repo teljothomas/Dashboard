@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
@@ -15,8 +15,11 @@
     <ProjectReference Include="..\TradeX.Agent.JournalKillHelper\TradeX.Agent.JournalKillHelper.csproj" />
     <ProjectReference Include="..\..\src\TradeX.Agent.Core\TradeX.Agent.Core.csproj" />
     <ProjectReference Include="..\..\src\TradeX.Agent.Service\TradeX.Agent.Service.csproj" />
+    <ProjectReference Include="..\..\src\TradeX.Agent.Tally\TradeX.Agent.Tally.csproj" />
+    <ProjectReference Include="..\..\tools\TallySimulator\TallySimulator.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\fixtures\signature-vector.json" Link="fixtures\signature-vector.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\fixtures\tally\*.json" Link="fixtures\tally\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

@@ -10,6 +10,7 @@ using TradeX.Agent.Core.Journal;
 using TradeX.Agent.Core.Registration;
 using TradeX.Agent.Core.Runtime;
 using TradeX.Agent.Core.Security;
+using TradeX.Agent.Tally;
 
 namespace TradeX.Agent.Service;
 
@@ -84,7 +85,11 @@ public static class AgentHost
                     builder.Services.AddSingleton(journal);
                     builder.Services.AddSingleton<ICloudClient>(cloud);
                     builder.Services.AddSingleton(TimeProvider.System);
-                    builder.Services.AddSingleton<ITallyProbe, NoTallyClientProbe>(); // replaced by the Tally client in WP-05.4
+                    builder.Services.AddSingleton<ITallyProbe>(sp =>
+                    {
+                        var tallyLog = sp.GetRequiredService<ILoggerFactory>().CreateLogger<TallyClient>();
+                        return new TallyClient(options, identity.ExpectedCompany.TallyName, tallyLog);
+                    });
                     builder.Services.AddSingleton<AgentRuntime>();
                     builder.Services.AddHostedService<AgentWorker>();
 

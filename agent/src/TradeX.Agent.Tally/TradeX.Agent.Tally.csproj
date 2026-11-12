@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>TradeX.Agent.Tally</RootNamespace>
+    <AssemblyName>TradeX.Agent.Tally</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TradeX.Agent.Core\TradeX.Agent.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="TradeX.Agent.Tests" />
+  </ItemGroup>
+</Project>
+
