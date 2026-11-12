@@ -93,13 +93,16 @@ Hard rules:
 
 ## 4. Lease (single active agent)
 
-- Acquire: granted if no lease, lease expired, or same agent. Holder change ⇒ `epoch = epoch + 1`.
+- Acquire: granted if no lease, lease expired, or same agent. The epoch grows when the holder changes **or the
+  previous lease had expired** (a gap in holding makes in-flight work uncertain, TS-T10); a live lease the same
+  agent already holds keeps its epoch. The lease row is never deleted (release and revoke set `expires_at = now()`),
+  so the epoch only ever increases and a stale agent can never match a fresh lease.
 - TTL 90 s; heartbeat every 30 s renews. Release on clean shutdown.
 - Every mutating connector call checks, in the same DB transaction: `lease.agent_id = caller AND
   lease.epoch = body.epoch AND lease.expires_at > now()`; otherwise 409 LEASE_STALE and the agent must
   stop work, re-acquire, and re-verify any in-flight items (they become UNCERTAIN on the cloud side).
 - Second agent for the same company while lease is live ⇒ 409 LEASE_HELD; it idles and retries every 5 min.
-  Revoking an agent (admin) also deletes its lease.
+  Revoking an agent (admin) also expires its lease.
 
 ## 5. Import (Tally → ERP inbox)
 

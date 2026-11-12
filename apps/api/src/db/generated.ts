@@ -23,6 +23,8 @@ export type JsonPrimitive = boolean | number | string | null;
 
 export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
 
+export type Numeric = ColumnType<string, number | string, number | string>;
+
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export interface AppSetting {
@@ -105,6 +107,58 @@ export interface ClientMutation {
   user_id: string;
 }
 
+export interface ConnectorAgent {
+  agent_version: string;
+  company_id: string;
+  id: string;
+  last_seen_at: Timestamp | null;
+  last_status: Json | null;
+  machine_fingerprint: string;
+  machine_name: string;
+  public_key: string;
+  registered_at: Generated<Timestamp>;
+  revoked_at: Timestamp | null;
+  revoked_by: string | null;
+  status: Generated<string>;
+}
+
+export interface ConnectorHeartbeat {
+  agent_id: string;
+  at: Generated<Timestamp>;
+  company_match: boolean;
+  error: string | null;
+  id: Generated<Int8>;
+  local_queue: Generated<number>;
+  tally_reachable: boolean;
+  tally_version: string | null;
+}
+
+export interface ConnectorLease {
+  acquired_at: Generated<Timestamp>;
+  agent_id: string;
+  company_id: string;
+  epoch: Int8;
+  expires_at: Timestamp;
+  renewed_at: Generated<Timestamp>;
+}
+
+export interface ConnectorNonce {
+  agent_id: string;
+  at: Generated<Timestamp>;
+  nonce: string;
+}
+
+export interface ConnectorRegistrationCode {
+  code_hash: string;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  expires_at: Timestamp;
+  id: string;
+  used_at: Timestamp | null;
+  used_by_agent_id: string | null;
+}
+
 export interface Device {
   first_seen_at: Generated<Timestamp>;
   id: string;
@@ -124,6 +178,23 @@ export interface Division {
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
   version: Generated<number>;
+}
+
+export interface ImportBatch {
+  agent_id: string;
+  applied_at: Timestamp | null;
+  company_id: string;
+  epoch: Int8;
+  error: string | null;
+  from_alter_id: Int8 | null;
+  id: string;
+  payload_sha256: string;
+  received_at: Generated<Timestamp>;
+  record_count: number;
+  result_summary: Json | null;
+  status: Generated<string>;
+  stream: string;
+  to_alter_id: Int8 | null;
 }
 
 export interface Job {
@@ -186,6 +257,24 @@ export interface OwnerApproval {
   kind: string;
   note: string | null;
   subject: Generated<Json>;
+}
+
+export interface Party {
+  address: string | null;
+  archived_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  gstin: string | null;
+  id: string;
+  kinds: Generated<string[]>;
+  name: string;
+  phone: string | null;
+  source: string;
+  sync_seq: Int8 | null;
+  tally_ledger_guid: string | null;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+  version: Generated<number>;
 }
 
 export interface PasswordReset {
@@ -264,6 +353,174 @@ export interface SyncConflict {
   user_id: string;
 }
 
+export interface SyncWatermark {
+  company_id: string;
+  last_alter_id: Generated<Int8>;
+  last_full_recon_at: Timestamp | null;
+  last_success_at: Timestamp | null;
+  stream: string;
+}
+
+export interface TallyBalanceSnapshot {
+  as_of: Timestamp;
+  closing_balance: Numeric;
+  company_id: string;
+  id: string;
+  imported_at: Generated<Timestamp>;
+  last_import_batch_id: string | null;
+  ledger_guid: string | null;
+  ledger_name: string;
+}
+
+export interface TallyCompany {
+  books_from: Timestamp;
+  company_number: Generated<string>;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  display_name: string;
+  fingerprint: string;
+  fy_start_month: Generated<number>;
+  id: string;
+  is_test: Generated<boolean>;
+  posting_mode: Generated<string>;
+  production_approval_id: string | null;
+  tally_guid: string | null;
+  tally_name: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+  version: Generated<number>;
+}
+
+export interface TallyCostCentre {
+  alter_id: Int8 | null;
+  archived_in_tally: Generated<boolean>;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  guid: string;
+  id: string;
+  last_import_batch_id: string | null;
+  name: string;
+  parent: string | null;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface TallyGroup {
+  alter_id: Int8 | null;
+  archived_in_tally: Generated<boolean>;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  guid: string;
+  id: string;
+  last_import_batch_id: string | null;
+  name: string;
+  parent: string | null;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface TallyLedger {
+  alter_id: Int8 | null;
+  archived_in_tally: Generated<boolean>;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  gstin: string | null;
+  guid: string;
+  id: string;
+  is_party: Generated<boolean>;
+  last_import_batch_id: string | null;
+  name: string;
+  opening_balance: Numeric | null;
+  parent_group: string | null;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface TallyStockItem {
+  alter_id: Int8 | null;
+  archived_in_tally: Generated<boolean>;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  guid: string;
+  id: string;
+  last_import_batch_id: string | null;
+  name: string;
+  parent: string | null;
+  unit_name: string | null;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface TallyUnit {
+  alter_id: Int8 | null;
+  archived_in_tally: Generated<boolean>;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  guid: string;
+  id: string;
+  last_import_batch_id: string | null;
+  name: string;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface TallyVoucher {
+  alter_id: Int8 | null;
+  amount: Numeric;
+  base_type: string;
+  company_id: string;
+  content_hash: string;
+  erp_event_id: string | null;
+  guid: string;
+  id: string;
+  imported_at: Generated<Timestamp>;
+  is_cancelled: Generated<boolean>;
+  is_deleted_in_tally: Generated<boolean>;
+  last_import_batch_id: string | null;
+  master_id: Int8 | null;
+  narration: string | null;
+  party_ledger_guid: string | null;
+  party_ledger_name: string | null;
+  reference: string | null;
+  updated_at: Generated<Timestamp>;
+  voucher_date: Timestamp;
+  voucher_number: Generated<string>;
+  voucher_type_name: string;
+}
+
+export interface TallyVoucherInventoryLine {
+  amount: Numeric;
+  batch_name: string | null;
+  godown: string | null;
+  id: string;
+  line_no: number;
+  qty: Numeric;
+  rate: Numeric | null;
+  stock_item_guid: string | null;
+  stock_item_name: string;
+  uom: string | null;
+  voucher_id: string;
+}
+
+export interface TallyVoucherLedgerLine {
+  amount: Numeric;
+  cost_centres: Generated<Json>;
+  id: string;
+  is_party: Generated<boolean>;
+  ledger_guid: string | null;
+  ledger_name: string;
+  line_no: number;
+  voucher_id: string;
+}
+
+export interface TallyVoucherType {
+  alter_id: Int8 | null;
+  archived_in_tally: Generated<boolean>;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  guid: string;
+  id: string;
+  last_import_batch_id: string | null;
+  name: string;
+  parent: string | null;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface UserRole {
   created_at: Generated<Timestamp>;
   created_by: string | null;
@@ -280,13 +537,20 @@ export interface DB {
   attachment_link: AttachmentLink;
   audit_log: AuditLog;
   client_mutation: ClientMutation;
+  connector_agent: ConnectorAgent;
+  connector_heartbeat: ConnectorHeartbeat;
+  connector_lease: ConnectorLease;
+  connector_nonce: ConnectorNonce;
+  connector_registration_code: ConnectorRegistrationCode;
   device: Device;
   division: Division;
+  import_batch: ImportBatch;
   job: Job;
   login_attempt: LoginAttempt;
   notification: Notification;
   number_sequence: NumberSequence;
   owner_approval: OwnerApproval;
+  party: Party;
   password_reset: PasswordReset;
   permission: Permission;
   role: Role;
@@ -294,5 +558,17 @@ export interface DB {
   schema_migration: SchemaMigration;
   session: Session;
   sync_conflict: SyncConflict;
+  sync_watermark: SyncWatermark;
+  tally_balance_snapshot: TallyBalanceSnapshot;
+  tally_company: TallyCompany;
+  tally_cost_centre: TallyCostCentre;
+  tally_group: TallyGroup;
+  tally_ledger: TallyLedger;
+  tally_stock_item: TallyStockItem;
+  tally_unit: TallyUnit;
+  tally_voucher: TallyVoucher;
+  tally_voucher_inventory_line: TallyVoucherInventoryLine;
+  tally_voucher_ledger_line: TallyVoucherLedgerLine;
+  tally_voucher_type: TallyVoucherType;
   user_role: UserRole;
 }

@@ -1,0 +1,11 @@
+{
+  "_comment": "Shared signature test vector (INTERFACES section 5). Signature is ECDSA P-256 / SHA-256, IEEE P1363 (r||s, 64 bytes), base64. Public key only; the private key was discarded. The .NET agent must reproduce `canonical` from the inputs and verify `signature`.",
+  "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEMmp38ZqmzBeQm71nxgPltEmFC+9w\nQR9NaVaVFQIGQM6AnNKNewLcEVEZdq6wCnBvskD3Sp39yVJ2JEe8/r3CxQ==\n-----END PUBLIC KEY-----\n",
+  "method": "POST",
+  "path": "/connector/v1/heartbeat",
+  "timestamp": "1760000000",
+  "nonce": "0b7a2c64-8f1e-4d3a-9c52-5e6f7a8b9c01",
+  "body": "{\"epoch\":7,\"tallyReachable\":true,\"tallyVersion\":\"7.0\",\"companyMatch\":true,\"journalPending\":0,\"lastError\":null}",
+  "canonical": "POST\n/connector/v1/heartbeat\n1760000000\n0b7a2c64-8f1e-4d3a-9c52-5e6f7a8b9c01\nf628b3596911d74ae53b9b2a245b9e3c20a7758014ed7ed5c6a5e651fce50a0b",
+  "signature": "NFR+0h7SA9xg4w6a5O62+urIPNIHFnDw1WiX4NM80b9HnK6KYIaUSdAaLkA2YBbGukuhEYQodU4RoQxuFCsUKw=="
+}

@@ -203,6 +203,29 @@ single use), `X-Signature` = base64 ECDSA-P256-SHA256 over
 | POST | /outbox/:id/verify-result | {epoch, found, tallyGuid?, masterId?, voucherNumber?} |
 | GET | /version | → {minimumVersion, latestVersion, downloadNote} |
 
+Implementation notes (WP-05.2, `packages/contracts/src/connector.ts`):
+
+- **Responses** are the raw bodies shown in the table (no `{ data }` envelope; `/watermarks` is a JSON array,
+  `/lease/release` is 204, `/register` is 201). Errors use the standard error envelope.
+- **Signature**: `X-Signature` is base64 of ECDSA P-256 / SHA-256 in IEEE P1363 form (r‖s, 64 bytes, the .NET
+  `ECDsa.SignData` default). `X-Timestamp` is Unix seconds. `PATH` is the raw request target (path and query) as sent;
+  the body hash is of the raw body bytes (sha256 of nothing for GET). Shared vector:
+  `agent/tests/fixtures/signature-vector.json` (public key and signature only).
+- **Authentication failures** (unknown or revoked agent, missing header, skewed timestamp, bad signature, replayed
+  nonce) are one generic `401 UNAUTHENTICATED "Request authentication failed."`. A nonce is stored only after the
+  signature verified. A bad or unknown registration code is `401` with one message for unknown, expired and used.
+- **Lease**: acquire needs the company fingerprint returned by `/company/verify` (`403` `COMPANY_MISMATCH` otherwise).
+  `heartbeat` renews the lease and returns `commands: []` until a later WP queues commands. `lease/release`,
+  `heartbeat`, `import-batches` and `recon-snapshots` run the lease check in their own transaction (`409 LEASE_STALE`).
+- **ALTERID is not verified** (TALLY_INTEGRATION section 8): `fromAlterId`, `toAlterId` and record `alterId` are
+  nullable. Unchanged vouchers are recognised by a content hash; a lower alter id than the stored one is ignored.
+- **import-batches**: `records` is `MasterRecord[]` (`kind` GROUP, LEDGER, STOCK_ITEM, UNIT, VOUCHER_TYPE, COST_CENTRE),
+  `VoucherRecord[]` or `BalanceRecord[]` by `stream`. The response adds `created`, `updated`, `unchanged` to
+  `status: "APPLIED"`. The same `batchId` with the same content replays the stored result; other content is
+  `409 IDEMPOTENCY_MISMATCH`.
+- **recon-snapshots** carries one whole window (a diff cannot be chunked; at most 50 000 guids) and an optional
+  `isFull` that stamps `last_full_recon_at`.
+
 ## 6. Report envelope
 
 `{ "reportId", "params", "source": "TALLY|ERP_MANAGEMENT|ESTIMATE|MIXED", "asOf": ts|null, "stale": bool,

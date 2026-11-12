@@ -11,6 +11,7 @@ import {
 import { registerAdminRoutes } from './modules/identity/adminRoutes.js';
 import { registerIdentityRoutes } from './modules/identity/routes.js';
 import { registerSyncRoutes } from './modules/sync/index.js';
+import { registerTallyRoutes } from './modules/tally/index.js';
 import { publicRoute, registerAuthorize } from './plugins/authorize.js';
 import { registerCsrf } from './plugins/csrf.js';
 import { registerErrorHandling } from './plugins/errorHandler.js';
@@ -80,6 +81,7 @@ export function buildApp(config: AppConfig, options: BuildAppOptions = {}): Fast
   }
   registerAdminRoutes(app);
   registerSyncRoutes(app);
+  registerTallyRoutes(app);
   registerAttachmentRoutes(app, {
     storage: options.storage ?? new LocalFsStorage(config.ATTACHMENTS_DIR),
   });

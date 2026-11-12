@@ -4,22 +4,22 @@ Project: Meat Trading, Processing & Logistics ERP (working name: TradeX ERP)
 Current release: none
 Project state: FOUNDATION_IN_PROGRESS
 Application coding: STARTED (Phase 02 foundation packages and apps exist)
-Current stage: READY (Phase 04 COMPLETE; WP-05.0 BLOCKED, WP-05.1 done, WP-05.2 next)
-Current phase: PHASE-05 (1/9)
-Current task: WP-05.2
+Current stage: READY (Phase 04 COMPLETE; WP-05.0 BLOCKED, WP-05.1 and WP-05.2 done, WP-05.6 next)
+Current phase: PHASE-05 (2/9)
+Current task: WP-05.6
 Assigned model: Sonnet 5.5
 Last updated: 2026-11-12
-Last verified commit: WP-04.5 commit on main (`git log --oneline`)
-Next action: WP-05.2
+Last verified commit: WP-05.2 commit on main (`git log --oneline`)
+Next action: WP-05.6
 
 ## CURRENT POSITION
 
 Stage: READY
 Phase: PHASE-05 Tally connector read
-Task ID: WP-05.2 (WP-05.0 BLOCKED: .NET 10 SDK absent, verified 2026-11-12; WP-05.1 DONE)
+Task ID: WP-05.6 (WP-05.0 BLOCKED: .NET 10 SDK absent, verified 2026-11-12; WP-05.1, WP-05.2 DONE)
 Task status: NOT_STARTED
 Branch: main (pushed to origin 2026-11-11, owner approved; later pushes still need approval, so commits after that push are local only)
-Last completed work unit: WP-05.1 protocol spike (docs), 2026-11-12 (WP-05.0 BLOCKED; REV-04 follow-up fix 687f31f)
+Last completed work unit: WP-05.2 cloud connector API and Tally mirror, 2026-11-12 (WP-05.0 BLOCKED)
 
 ## PHASE TRACKER
 
@@ -32,7 +32,7 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | 02 | Application foundation | COMPLETE | 5/5 (gate passed 2026-11-11) |
 | 03 | Database and core services | COMPLETE | 6/6 (gate passed 2026-11-11) |
 | 04 | Authentication and permissions | COMPLETE | 6/6 (gate passed 2026-11-12; REV-04 APPROVED_WITH_FIXES, fixes applied) |
-| 05 | Tally connector read | IN_PROGRESS | 1/9 (05.1 done; 05.0 BLOCKED on .NET 10 SDK; 05.2 next) |
+| 05 | Tally connector read | IN_PROGRESS | 2/9 (05.1, 05.2 done; 05.0 BLOCKED on .NET 10 SDK, so 05.3, 05.4 and the agent half of 05.5 wait; 05.6 next) |
 | 06 | Meat trading and inventory | NOT_STARTED | 0/6 |
 | 07 | Factory and labour | NOT_STARTED | 0/5 |
 | 08 | Drivers, fleet, loans | NOT_STARTED | 0/6 |
@@ -75,15 +75,16 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | REV-04 follow-up | Automated security review: `ELEVATED_PERMISSIONS` now deny by default (explicit 23-code `STANDARD_PERMISSIONS`; finance.view, recon.edit, advance.settle, tally.mapping.edit, tally.data.view, report.operational.view and any future code are elevated, OWNER-only); new `catalogue.test.ts` | unit identity/roleMatrix/catalogue 24 pass; integration admin 38 pass; api typecheck, prettier clean (full suites not re-run) | 687f31f |
 | WP-05.0 | BLOCKED: `dotnet` not found | `dotnet --list-sdks` command not found | none |
 | WP-05.1 | Protocol spike from official docs: TALLY_INTEGRATION §3 menu path (Exchange > Data Synchronization) and §8 table (items a-j), 5 DOC_ONLY fixtures + README in `agent/tests/fixtures/tally/`. NOT VERIFIED (confirm in WP-05.7): company info, ALTERID filter, date-range filter, narration marker query, GUID on import, Receipt/Payment import body, unknown-ledger error. No ESC (nothing blocks Phase 05) | docs and fixtures only; 5 JSON files parse, prettier clean | WP-05.1 commit |
+| WP-05.2 | Cloud connector API and Tally mirror: migration `0006_tally_mirror.sql` (connector, lease, watermark, batch, masters, vouchers, balances, minimal `party`), contracts `connector.ts` and `tally.ts`, `modules/tally` (signature plugin, registration, lease/epoch, heartbeat, import apply with content hash and no ALTERID dependency, recon snapshots, `tally.onVouchersImported`, admin and mirror routes), shared signature vector, INTERFACES/DATA_MODEL/SYNC_DESIGN notes | unit domain 57, contracts 40, api 151, web 168; integration 312 (55 new: TS-S05, TS-T11, batch idempotency, watermark, deletion snapshot, TS-A08/A09); lint, typecheck, prettier, build clean | WP-05.2 commit |
 
 ## ACTIVE TASK
 
-Objective: WP-05.2 cloud connector API and Tally mirror schema (Node only; WP-05.0 stays BLOCKED).
+Objective: WP-05.6 web Tally status and administration (WP-05.3, 05.4 and the agent half of 05.5 stay BLOCKED on the .NET 10 SDK; WP-05.7 needs owner gate G2).
 Assigned agent: Sonnet 5.5
-Required prompt: prompts/phases/PHASE-05-TALLY-CONNECTOR-READ.md -> WP-05.2
-Required context files: none beyond the WP
-Allowed modifications: per WP
-Acceptance criteria: per WP-05.0 (dotnet --list-sdks shows 10.x, else BLOCKED and continue with WP-05.1 and WP-05.2).
+Required prompt: prompts/phases/PHASE-05-TALLY-CONNECTOR-READ.md -> WP-05.6
+Required context files: INTERFACES §2 tally rows; SYNC_DESIGN §6; contracts `tally.ts`
+Allowed modifications: `apps/web/src/features/tally/**` plus nav entries
+Acceptance criteria: per WP-05.6.
 
 ## OPEN BLOCKERS
 
@@ -101,6 +102,10 @@ Acceptance criteria: per WP-05.0 (dotnet --list-sdks shows 10.x, else BLOCKED an
 - Later protected operations: VPS purchase/domain (Phase 14), production deploy, live data import, production posting enable (Phase 15).
 
 ## QUALITY GATE
+
+WP-05.2 (executed 2026-11-12):
+- Lint: pass; Typecheck: pass (4 packages); Prettier: pass; Unit: pass (domain 57, contracts 40, api 151, web 168); Integration: 312 pass in one full run (55 new); `db:migrate` applied 0006 on the dev DB; api build: pass
+- Not run: e2e (web untouched), `pnpm audit --prod` (no dependency change), secret scan; no real Tally and no agent exists yet (signature vector verified on the Node side only)
 
 Phase 04 gate (WP-04.6, executed 2026-11-12):
 - Lint: pass; Typecheck: pass (4 packages); Prettier: pass; Unit: pass (domain 57, contracts 40, api 136, web 168); Integration: 257 pass (a first run of the admin suite timed out 6 tests under host load, the same command re-run alone passed 38/38, then the full suite passed); `db:migrate`: none pending (5 applied); Build: pass (web initial JS 191.34 KB gzip); E2E: 3 pass (fake API, not the real API); `pnpm audit --prod`: no known vulnerabilities; Security tests TS-S01, TS-S02, TS-S04: pass
@@ -159,11 +164,11 @@ Phase 02 gate (WP-02.5):
 
 ## NEXT EXACT ACTION
 
-Task ID: WP-05.2
+Task ID: WP-05.6
 Phase prompt: prompts/phases/PHASE-05-TALLY-CONNECTOR-READ.md
 Model: Sonnet 5.5
-Context: INTERFACES §5 and §2 tally rows (non-posting); DATA_MODEL §4; SYNC_DESIGN §4–5; SECURITY §1 agent row; docs/TALLY_INTEGRATION.md §8 (now filled, DOC_ONLY).
-Objective: migration `0006_tally_mirror.sql` (NOT 0005: 0005 is `attachment_per_uploader`; the WP text predates it), `apps/api/src/modules/tally/**`, `packages/contracts/src/connector.ts` and `tally.ts`, per the WP. Import must not depend on ALTERID (see §8 items b/c): design for date-window re-export plus guid diff, keep watermark fields.
-Expected output: tables, signature plugin, connector and admin endpoints, import apply, TS-S05, TS-T11, TS-A08/A09 tests.
-Note: a `party` table is created here only if Phase 06 has not; document in TASK_LOG.
-Carry-over gate items: PHASE-10 section B (`GET /audit` redaction), PHASE-14 section C/D (`trustProxy`, full common-password list). The web e2e still uses a fake API: consider one real-API browser run in Phase 14. No `GET /divisions` endpoint yet; add it with the first division-aware screen.
+Context: INTERFACES §2 tally rows; SYNC_DESIGN §6; `packages/contracts/src/tally.ts` (TallyStatusDto, TallyCompanyDto, ConnectorAgentDto, RegistrationCodeDto, TallyLedgerDto, TallyVoucherDto/Detail); existing `apps/web/src/features/admin` for patterns.
+Objective: `apps/web/src/features/tally/**`: status page (heartbeat, lease holder, watermarks, stale badge), companies and registration code (shown once, copy), agents revoke, read-only ledger and voucher browse with source label TALLY and as-of. API exists (WP-05.2): `/api/v1/tally/{status,companies,agents,ledgers,vouchers}`; permissions tally.connector.manage, tally.data.view, dashboard.view.
+Expected output: component tests plus e2e for registration-code issue and status display (fake API as in WP-04.5).
+Then: WP-05.7 (owner gate G2) and WP-05.8 (Opus REV-05) once the agent WPs exist; if .NET stays absent, report Phase 05 as partial and take owner direction.
+Carry from WP-05.2: migration is 0006; connector responses are raw (no data envelope); heartbeat `commands` is []; master deletion detection and a company-mismatch notification are not built. Carry-over gate items: PHASE-10 section B (`GET /audit` redaction), PHASE-14 section C/D (`trustProxy` matters for the registration limiter and audit ip, full common-password list). No `GET /divisions` endpoint yet.

@@ -96,6 +96,13 @@ Opus-approved note in DECISIONS.md.
   company_id, status (SYNC_DESIGN §3), voucher_payload jsonb, payload_sha256, attempt_count, next_attempt_at,
   last_attempt_at, last_error_code, last_error, claimed_agent_id, claimed_epoch, claim_expires_at,
   tally_guid, tally_master_id, tally_voucher_number, verified_at.
+- Implementation additions (migration `0006_tally_mirror.sql`, WP-05.2): `tally_voucher.content_hash` (sha256 of the
+  imported content, so an unchanged re-export is a no-op without ALTERID), `party_ledger_name`, `ledger_name` and
+  `stock_item_name` on voucher lines and `tally_balance_snapshot.ledger_name` (Tally exports carry names; guids are
+  resolved from the mirrored masters when absent), nullable `alter_id` and `import_batch.from/to_alter_id`,
+  `import_batch.stream` also allows `RECON` (snapshot idempotency) and holds `result_summary`, `tally_company.tally_guid`
+  and `fy_start_month`, `connector_agent.revoked_at/by`, `connector_registration_code.used_by_agent_id`. The app role
+  has no DELETE on mirror, agent, lease and batch tables (flags only). `connector_lease` rows are never deleted.
 - `posting_attempt` — outbox_id, attempt_no, agent_id, epoch, started_at, finished_at, outcome (`CREATED`,
   `ALREADY_EXISTS`,`REJECTED`,`TIMEOUT`,`TRANSPORT_ERROR`,`VERIFIED`,`VERIFY_NOT_FOUND`), response_excerpt (≤2 KB).
 
@@ -116,7 +123,8 @@ Opus-approved note in DECISIONS.md.
 
 ## 6. Parties (Phase 06)
 
-- `party` — name, kinds text[] (`CUSTOMER`,`SUPPLIER`,`TRANSPORT_CUSTOMER`,`LENDER`,`LESSOR`,`VENDOR`),
+- `party` (created in migration 0006 by WP-05.2 because Phase 06 had not run; Phase 06 extends it, same columns plus `sync_seq`
+  trigger already attached; Tally party ledgers upsert into it, only rows with source TALLY are refreshed) — name, kinds text[] (`CUSTOMER`,`SUPPLIER`,`TRANSPORT_CUSTOMER`,`LENDER`,`LESSOR`,`VENDOR`),
   phone, gstin, address, tally_ledger_guid nullable unique, source (`TALLY`,`ERP`), archived_at.
   Tally parties auto-upsert from import; ERP-created parties may later be linked to a Tally ledger.
 
