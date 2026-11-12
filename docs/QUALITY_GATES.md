@@ -6,8 +6,8 @@ Status PLANNED = defined here, created by Phase 02, not yet verified. Phase 02 m
 script names and change status to VERIFIED with the date. Later prompts must check a command is VERIFIED
 before relying on it; if not, stop and fix Phase 02 output rather than inventing a command.
 
-Environment (dev PC, recorded 2026-11-11, WP-00.4): Node v24.11.0 · pnpm 12.8.1 · git 2.51.0.windows.1 ·
-Docker 28.4.0 (daemon running as of 2026-11-11, WP-02.4) · .NET SDK not installed.
+Environment (dev PC, recorded 2026-11-11, WP-00.4; updated 2026-11-12): Node v24.11.0 · pnpm 12.8.1 · git 2.51.0.windows.1 ·
+Docker 28.4.0 (daemon running as of 2026-11-11, WP-02.4) · .NET SDK 10.0.404 installed (2026-11-12).
 CI workflow `.github/workflows/ci.yml`: YAML parses, `docker compose config` ok for compose.dev.yml; NOT validated with
 `actionlint` (not installed) and has never run on GitHub.
 
@@ -25,7 +25,7 @@ CI workflow `.github/workflows/ci.yml`: YAML parses, `docker compose config` ok 
 | Build | `pnpm build` | VERIFIED 2026-11-11 (Phase 03 gate: web initial JS 147.48 KB gzip) |
 | Dependency audit | `pnpm audit --prod` | VERIFIED 2026-11-11 (no known vulnerabilities) |
 | Secret scan | `gitleaks detect --no-banner` | NOT VERIFIED locally: gitleaks not installed on dev PC. CI job `secret-scan` (gitleaks-action) is defined in `.github/workflows/ci.yml` but has not run (no remote run yet) |
-| Agent build/test | `dotnet build agent/TradeX.TallyAgent.sln` / `dotnet test agent/TradeX.TallyAgent.sln` | PLANNED (requires .NET 10 SDK; not installed on dev PC as of 2026-11-11) |
+| Agent build/test | `dotnet build agent/TradeX.TallyAgent.sln` / `dotnet test agent/TradeX.TallyAgent.sln` | PLANNED (.NET 10.0.404 SDK installed 2026-11-12; solution to be created in WP-05.3) |
 
 Environment facts observed 2026-11-11 on dev PC: Node v24.11.0, pnpm 12.8.1, npm 11.6.1, git 2.51.0,
 Docker CLI present (daemon state not verified), dotnet NOT installed, psql NOT installed.
