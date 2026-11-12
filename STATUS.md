@@ -68,6 +68,7 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | WP-04.1 | Identity: migration `0004_identity.sql` (app_user, role, permission, role_permission, user_role, device, session, password_reset, login_attempt; FKs client_mutation.device_id and sync_conflict.device_id to device), `modules/identity` (42-permission catalogue, six system roles, default matrix, insert-only idempotent `seedIdentity`, argon2id password module with policy, `createOwner`), CLI `user:create-owner` (hidden input; stdin only when NODE_ENV=test) | unit api 81 (12 new); integration 167 (17 new, incl. CLI subprocess); lint, typecheck, prettier, build clean; audit clean | WP-04.1 commit |
 | WP-04.2 | Auth: `POST /auth/login`, `/auth/logout`, `GET /auth/me`, `POST /auth/change-password`; session plugin sets `request.ctx` (roles, grants, deviceId, csrfToken), HMAC double-submit CSRF, DB-derived lockout (5/user, 20/IP per 15 min) + in-memory request limiter, device auto-registration, must-change-password gate, contracts `identity.ts` | unit api 91 (10 new), contracts 40, web 105; integration 199 (32 new; 3 review fixes), clean runs (1 earlier unidentified failure, not reproduced); lint, typecheck, prettier, build clean; audit clean | WP-04.2 commit |
 | WP-04.3 | Authorization: `plugins/authorize.ts` (`authorize(permission, {scope})`, `sessionOnly()`, `publicRoute()` via `config.auth`; `onRoute` throws for an undeclared route; 401/403 in `onRequest`, scope resolver in `preHandler`, out of scope is 404; `app.routeInventory`), `lib/scope.ts` (`grantCovers`, `inScope`, `assertInScope`, `assertNotSelf`, `scopeWhere`), route inventory test (public allowlist, reviewed session-only list, 401 on every protected route), attachments, sync, identity and `/health` routes declared, CSRF connector exemption judged by matched route; INTERFACES §3 limiter note | unit api 128 (37 new), integration 199 (unchanged); lint, typecheck, prettier, build clean; audit clean | WP-04.3 commit |
+| WP-04.3 follow-up | Attachment dedupe per uploader: migration `0005_attachment_per_uploader.sql` (drops UNIQUE sha256 and UNIQUE storage_key, adds UNIQUE (sha256, uploaded_by) and an index on storage_key), `saveUpload` per-uploader rows sharing one blob, `core.attachments.link(..., actor)` requires uploader or `canRead` (NOT_FOUND otherwise), DATA_MODEL and INTERFACES updated | integration 202 (3 new); unit api 128; lint, typecheck, prettier, build clean; 0005 applied on dev DB; audit clean | follow-up commit |
 
 ## ACTIVE TASK
 
@@ -80,7 +81,7 @@ Acceptance criteria: per WP-04.4. New routes must declare `config.auth` (the inv
 
 ## OPEN BLOCKERS
 
-- Owner decision, CARRIED INTO PHASE 04 (not done in WP-04.3, awaiting owner; not blocking WP-04.4): attachment dedupe is global by sha256 per DATA_MODEL section 1, so a second user uploading identical bytes gets the first user's id, and `core.attachments.link` does not check who is linking (security review finding, medium). Recommended: per-uploader rows sharing one blob (`UNIQUE (sha256, uploaded_by)`, DATA_MODEL change) and `link` checking uploader or `canRead`. PDF active-content scan is best effort (object streams can hide markers); real controls are attachment disposition and nosniff.
+- Attachment dedupe/link blocker: RESOLVED 2026-11-12 (owner approved; migration 0005). PDF active-content scan is best effort (object streams can hide markers); real controls are attachment disposition and nosniff.
 - None for Phase 03. Not blocking: gitleaks and actionlint not installed on the dev PC (secret scan runs in CI; `.github/workflows/ci.yml` is NOT validated with actionlint and has never run on GitHub). .NET SDK absent (blocks WP-05.0).
 
 ## OWNER APPROVAL REQUIRED
@@ -88,11 +89,14 @@ Acceptance criteria: per WP-04.4. New routes must declare `config.auth` (the inv
 - Answer docs/discovery/*.md (non-blocking until Phase 05.7/11/15): TALLY_DISCOVERY.md (owner/Tally PC), OWNER_QUESTIONS.md (owner), CA_QUESTIONS.md (CA). Register: docs/OPEN_DECISIONS.md.
 - Pushing: owner approved first push 2026-11-11 (main → origin). Further pushes need approval per ADR-063.
 - Engage a CA/accountant for ACCT decisions (OD-010..022, OD-033, OD-047, OD-048) before Phase 11 production work.
-- Keep Docker Desktop running for DB work (verified running 2026-11-11, dev DB container `tradex-dev-db-1` is up).
+- Keep Docker Desktop running for DB work (verified running 2026-11-11, dev DB container `tradex-dev-db-1` is up, migrated to 0005).
 - Install .NET 10 SDK on the dev PC (verified absent 2026-11-11) — needed by WP-05.0.
 - Later protected operations: VPS purchase/domain (Phase 14), production deploy, live data import, production posting enable (Phase 15).
 
 ## QUALITY GATE
+
+Attachment follow-up to WP-04.3 (executed 2026-11-12):
+- Lint, typecheck, prettier, build: pass; Unit: api 128; Integration: 202 pass (3 new); `db:migrate` applied 0005 on the dev DB, second run no pending; `pnpm audit --prod`: no known vulnerabilities
 
 WP-04.3 (executed 2026-11-12):
 - Lint: pass; Typecheck: pass; Prettier: pass; Unit: pass (api 128, 37 new); Integration: 199 pass (unchanged count; one test now declares its ad-hoc route); Build: pass; `pnpm audit --prod`: no known vulnerabilities
@@ -144,6 +148,6 @@ Objective: users CRUD (disable, roles with optional division), custom roles (sys
 Expected output: `modules/identity/**` routes and services, contracts additions, tests per endpoint including permission denial and audit entries.
 Tests: each endpoint allow/deny, audit rows, system role immutability, reset code single use, lockout clearing (admin unlock must clear or supersede recent `login_attempt` failures; lock is derived from them, `app_user.locked_until` is unused).
 Notes from 04.3: every route needs `config: { auth: authorize('perm') | sessionOnly() | publicRoute() }` or registration throws; a new public or session-only route also needs an entry in `apps/api/test/routes.inventory.test.ts` (public allowlist already lists `/api/v1/auth/reset/complete`). Use `assertInScope`/`scopeWhere`/`assertNotSelf` from `lib/scope.ts` in services. Test header provider accepts `x-test-grants` (JSON) and `x-test-roles`. `request.ip` ignores proxies (set `trustProxy` in Phase 14). `COMMON_PASSWORDS` is a short list (replace before go-live). `startOfflineRuntime()` is still not called from `main.tsx`; WP-04.5 sets `sessionStore.userId` on login, calls `engine.resume()` after re-login, and must send `X-CSRF-Token` and `X-Device-Id` on mutations.
-Open owner decision (carried blocker, not done in 04.3): attachment dedupe by sha256 gives a second uploader the first user's id and `core.attachments.link` does not check the actor. Recommended `UNIQUE (sha256, uploaded_by)` (DATA_MODEL change, migration 0005) plus `link` checking uploader or `canRead`. A `link` actor check alone would break a second uploader, so do both together once the owner approves.
+Attachment blocker RESOLVED (owner approved 2026-11-12): migration 0005 `UNIQUE (sha256, uploaded_by)`, `link(..., actor)` checks uploader or `canRead`. Later modules calling `core.attachments.link` must pass the actor (a full `RequestContext`, or `{ userId }` for own uploads only).
 Open design question: one device per user is not enforced (a device keeps its first owner); ask the owner if wanted.
 After this: WP-04.5
