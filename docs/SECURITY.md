@@ -23,6 +23,13 @@
 - Offline: the PWA never stores the password. Offline use relies on the existing cookie; if the session
   expired while offline, local capture continues but sync waits for re-login **by the same user**
   (outbox entries are tagged with user_id; a different user cannot push them).
+- Web client (WP-04.5): the CSRF token lives in memory only and is re-read from `GET /auth/me` on every page load.
+  For an offline start the app keeps a local copy of who is signed in (`tradex.identity` in localStorage: user,
+  role names, permission grants; no password, no session token, no CSRF token) so local capture works; it is
+  UI-only (the API authorizes everything), is removed on logout, on a 401 and when `/auth/me` answers 401, and the
+  app re-checks it against the server every 30 s and on `online`. Logout needs the server (a logout that only
+  cleared the phone would leave a live session): offline, the user stays signed in and is told why. A 401 on any
+  request ends the UI session, clears the query cache and shows the login page.
 
 ## 3. Authorization
 

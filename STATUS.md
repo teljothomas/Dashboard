@@ -4,22 +4,22 @@ Project: Meat Trading, Processing & Logistics ERP (working name: TradeX ERP)
 Current release: none
 Project state: FOUNDATION_IN_PROGRESS
 Application coding: STARTED (Phase 02 foundation packages and apps exist)
-Current stage: READY (WP-04.4 done; WP-04.5 next)
-Current phase: PHASE-04 (4/6)
-Current task: WP-04.5
-Assigned model: Sonnet 5.5
+Current stage: READY (WP-04.5 done; WP-04.6 next)
+Current phase: PHASE-04 (5/6)
+Current task: WP-04.6
+Assigned model: Sonnet 5.5 + Opus review (REV-04)
 Last updated: 2026-11-12
-Last verified commit: WP-04.4 commit on main (`git log --oneline`)
-Next action: WP-04.5
+Last verified commit: WP-04.5 commit on main (`git log --oneline`)
+Next action: WP-04.6
 
 ## CURRENT POSITION
 
 Stage: READY
 Phase: PHASE-04 Authentication and permissions
-Task ID: WP-04.5
+Task ID: WP-04.6
 Task status: NOT_STARTED
 Branch: main (pushed to origin 2026-11-11, owner approved; later pushes still need approval, so commits after that push are local only)
-Last completed work unit: WP-04.4 user and role management, password reset (Sonnet 5.5, 2026-11-12)
+Last completed work unit: WP-04.5 web login, route guard, admin screens (Sonnet 5.5, 2026-11-12)
 
 ## PHASE TRACKER
 
@@ -31,7 +31,7 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | 01 | Architecture and contracts | COMPLETE | Baseline v1.0 (WP-01.R / 01.X run on demand) |
 | 02 | Application foundation | COMPLETE | 5/5 (gate passed 2026-11-11) |
 | 03 | Database and core services | COMPLETE | 6/6 (gate passed 2026-11-11) |
-| 04 | Authentication and permissions | IN_PROGRESS | 4/6 |
+| 04 | Authentication and permissions | IN_PROGRESS | 5/6 |
 | 05 | Tally connector read | NOT_STARTED | 0/9 |
 | 06 | Meat trading and inventory | NOT_STARTED | 0/6 |
 | 07 | Factory and labour | NOT_STARTED | 0/5 |
@@ -70,15 +70,16 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | WP-04.3 | Authorization: `plugins/authorize.ts` (`authorize(permission, {scope})`, `sessionOnly()`, `publicRoute()` via `config.auth`; `onRoute` throws for an undeclared route; 401/403 in `onRequest`, scope resolver in `preHandler`, out of scope is 404; `app.routeInventory`), `lib/scope.ts` (`grantCovers`, `inScope`, `assertInScope`, `assertNotSelf`, `scopeWhere`), route inventory test (public allowlist, reviewed session-only list, 401 on every protected route), attachments, sync, identity and `/health` routes declared, CSRF connector exemption judged by matched route; INTERFACES §3 limiter note | unit api 128 (37 new), integration 199 (unchanged); lint, typecheck, prettier, build clean; audit clean | WP-04.3 commit |
 | WP-04.3 follow-up | Attachment dedupe per uploader: migration `0005_attachment_per_uploader.sql` (drops UNIQUE sha256 and UNIQUE storage_key, adds UNIQUE (sha256, uploaded_by) and an index on storage_key), `saveUpload` per-uploader rows sharing one blob, `core.attachments.link(..., actor)` requires uploader or `canRead` (NOT_FOUND otherwise), DATA_MODEL and INTERFACES updated | integration 202 (3 new); unit api 128; lint, typecheck, prettier, build clean; 0005 applied on dev DB; audit clean | follow-up commit |
 | WP-04.4 | User and role management, password reset: contracts (`identity.ts`), `modules/identity` `adminUsers.ts` (users list/create/update, disable revokes sessions, unlock, reset-code issue shown once, `completePasswordReset` single use), `roles.ts` (custom roles, system roles immutable), `adminSessions.ts` (sessions, devices, force logout, revoke device), `auditView.ts` (`GET /audit`), `adminRoutes.ts` (all routes, public `/auth/reset/complete` rate limited); guards OWNER_ONLY, SELF_MODIFICATION, LAST_OWNER; INTERFACES and SECURITY updated | unit api 131 (3 new), contracts 40; integration 234 (32 new, 3 full runs clean after one unreproduced failure and a test-clock fix); lint, typecheck, prettier, build clean; audit clean | WP-04.4 commit |
+| WP-04.5 | Web login, guard, admin screens: `features/auth` (auth store with `/auth/me` bootstrap, in-memory CSRF token, local identity copy for offline start, `RequireAuth` with forced change-password, `RequirePermission`, login, change password, reset-with-code page, sign-out with outbox-count warning), `features/admin` (users list/create/detail with roles, disable, unlock, reset code shown once with copy, sessions, devices; roles list/editor; audit log; admin chunks lazy-loaded), `features/account` More page, permission-aware nav, 401 handling in the query client, `SessionEffects` (starts sync runtime, `engine.resume()` after re-login, clears cache on sign-out) | web unit 167 (62 new); domain 57, contracts 40, api 131 unchanged; e2e 3 pass (login → placeholder → logout, nav, 360 px screens); lint, typecheck, prettier, build clean (initial JS 191.31 KB gzip); audit clean | WP-04.5 commit |
 
 ## ACTIVE TASK
 
-Objective: WP-04.5 web login, route guard, admin screens.
-Assigned agent: Sonnet 5.5 (Haiku-eligible: user/role forms and lists after the first Sonnet-built screen)
-Required prompt: prompts/phases/PHASE-04-AUTHENTICATION-PERMISSIONS.md -> WP-04.5
-Required context files: OFFLINE_DESIGN §5; INTERFACES §2 identity rows
-Allowed modifications: `apps/web/src/features/auth/**`, `features/admin/**`, `app/` guard and nav
-Acceptance criteria: per WP-04.5 (component tests, Playwright login → dashboard placeholder → logout, screens usable at 360 px).
+Objective: WP-04.6 security tests, Opus review (REV-04), Phase 04 gate.
+Assigned agent: Sonnet 5.5 + opus-architect (REV-04)
+Required prompt: prompts/phases/PHASE-04-AUTHENTICATION-PERMISSIONS.md -> WP-04.6
+Required context files: QUALITY_GATES §4 (TS-S01, S02, S04); review template
+Allowed modifications: api security tests, review packet under docs/reviews, STATUS/QUALITY_GATES
+Acceptance criteria: per WP-04.6 (tests pass; REV-04 APPROVED or pending recorded).
 
 ## OPEN BLOCKERS
 
@@ -95,6 +96,10 @@ Acceptance criteria: per WP-04.5 (component tests, Playwright login → dashboar
 - Later protected operations: VPS purchase/domain (Phase 14), production deploy, live data import, production posting enable (Phase 15).
 
 ## QUALITY GATE
+
+WP-04.5 (executed 2026-11-12):
+- Lint: pass; Typecheck: pass (4 packages); Prettier: pass; Unit: pass (domain 57, contracts 40, api 131, web 167 with 62 new); Build: pass (web initial JS 191.31 KB gzip, up from 147.48 because the offline runtime is now reachable from the entry; admin screens are lazy chunks); E2E: 3 pass (Playwright against a `page.route` fake API, not the real API); `pnpm audit --prod`: no known vulnerabilities
+- Not run: api integration (api untouched), security suite, secret scan, `db:migrate` (no migration); no browser test against the real API and database (api contract covered by the api integration suites)
 
 WP-04.4 (executed 2026-11-12):
 - Lint: pass; Typecheck: pass (4 packages); Prettier: pass; Unit: pass (api 131, 3 new; contracts 40); Integration: 234 pass (32 new), 3 consecutive full runs clean (an earlier full run had 1 unreproduced failure in the reset-code TTL test, suspected host vs Docker clock skew; the check now uses the database clock only); Build: pass; `pnpm audit --prod`: no known vulnerabilities
@@ -145,12 +150,12 @@ Phase 02 gate (WP-02.5):
 
 ## NEXT EXACT ACTION
 
-Task ID: WP-04.5
+Task ID: WP-04.6
 Phase prompt: prompts/phases/PHASE-04-AUTHENTICATION-PERMISSIONS.md
-Model: Sonnet 5.5 (Haiku: user/role forms and lists after the first Sonnet-built screen)
-Context: OFFLINE_DESIGN §5; INTERFACES §2 identity rows (updated in WP-04.4: new routes unlock, devices, revoke device)
-Objective: login page (mobile), session bootstrap via `/auth/me`, CSRF token store, permission-aware navigation, forced change password, admin users/roles/sessions screens, logout warning when the outbox has items.
-Expected output: `apps/web/src/features/auth/**`, `features/admin/**`, app guard and nav; component tests; Playwright login → dashboard placeholder → logout; screens usable at 360 px.
-Notes from 04.4: wire contracts are in `packages/contracts/src/identity.ts` (UserDto, RoleDto, SessionDto, DeviceDto, AuditEntryDto, request schemas). Lists use `{data, meta:{nextCursor}}`. The reset code is returned once by `POST /users/:id/reset-code`; show it with a copy button and never store it. Create user takes an admin-set temporary password (user must change it at first login). 404 from users/roles/audit routes can mean a division-limited grant. Error `details.reason` values: OWNER_ONLY, SELF_MODIFICATION, LAST_OWNER, SYSTEM_ROLE_IMMUTABLE, USERNAME_TAKEN, ROLE_CODE_TAKEN, UNKNOWN_ROLE, UNKNOWN_DIVISION, UNKNOWN_PERMISSION, DUPLICATE_PERMISSION, USER_NOT_ACTIVE, RESET_CODE_INVALID. From 04.3: `startOfflineRuntime()` is not called from `main.tsx`; WP-04.5 sets `sessionStore.userId` on login, calls `engine.resume()` after re-login, and sends `X-CSRF-Token` and `X-Device-Id` on mutations. `request.ip` ignores proxies (set `trustProxy` in Phase 14). `COMMON_PASSWORDS` is a short list (replace before go-live).
-Open design questions for the owner: (1) one device per user is not enforced (a device keeps its first owner); (2) ADMIN may assign any system role and compose a custom role from any permission (only OWNER is protected); decide before WP-04.6 whether to restrict. OD-032 stays provisional (admin-issued code).
-After this: WP-04.6 (Opus review REV-04)
+Model: Sonnet 5.5 + Opus review (REV-04)
+Context: QUALITY_GATES §4 (TS-S01, S02, S04); review template
+Objective: security tests TS-S02 (other user's record via test entity gives 404), TS-S04 (expired or revoked session gives 401), TS-S01 baseline (DRIVER lacks `report.financial.view`; snapshot test of default role grants); review packet for Opus (auth plugin, session, CSRF, rate limit, scope helper, plus the new web auth store and offline identity copy); Phase 04 gate (full suite incl. integration, db:migrate, build, e2e, audit).
+Expected output: api security tests, `docs/reviews` packet for REV-04 (run via `opus-architect` if available, else record "REV-04 pending" under OWNER APPROVAL REQUIRED), STATUS next WP-05.0.
+Notes from 04.5: the web client keeps a local identity copy (`tradex.identity`) for offline start and refuses an offline logout (SECURITY §2); Playwright e2e uses a fake API via `page.route`, so no browser test has run against the real API (consider one in the Phase 04 gate or Phase 14). No `GET /divisions` endpoint exists: the admin UI cannot pick a division limiter for new role assignments (existing limiters are kept); add the endpoint when the first division-aware screen needs it. `request.ip` ignores proxies (set `trustProxy` in Phase 14). `COMMON_PASSWORDS` is a short list (replace before go-live). Initial JS is 191.31 KB gzip.
+Open design questions for the owner: (1) one device per user is not enforced (a device keeps its first owner); (2) ADMIN may assign any system role and compose a custom role from any permission (only OWNER is protected); decide before closing REV-04 whether to restrict. OD-032 stays provisional (admin-issued code).
+After this: WP-05.0 (Phase 05 Tally connector read; needs the .NET 10 SDK on the dev PC)

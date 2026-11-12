@@ -1,7 +1,9 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { authStore } from '../features/auth/authStore';
+import { resetAuth, signInAs } from '../test-utils/auth';
 import { NAV_ITEMS } from './navItems';
 import { routes } from './routes';
 
@@ -10,10 +12,18 @@ function renderAt(path: string) {
   return render(<RouterProvider router={router} />);
 }
 
+const EVERYTHING = ['trip.view', 'expense.view', 'expense.approve'];
+
 describe('app shell', () => {
+  beforeEach(() => {
+    resetAuth();
+    signInAs(EVERYTHING);
+  });
+
   it('renders top bar, content and a bottom nav with at most 5 items', () => {
     renderAt('/');
     expect(screen.getByRole('banner')).toHaveTextContent('TradeX ERP');
+    expect(screen.getByRole('banner')).toHaveTextContent('Olivia Owner');
     expect(screen.getByRole('main')).toBeInTheDocument();
     const nav = screen.getByRole('navigation', { name: 'Main navigation' });
     const links = within(nav).getAllByRole('link');
@@ -44,5 +54,29 @@ describe('app shell', () => {
     for (const link of within(screen.getByRole('navigation')).getAllByRole('link')) {
       expect(link.className).toContain('min-h-14');
     }
+  });
+
+  it('hides sections the user has no permission for, and blocks them by address', () => {
+    resetAuth();
+    signInAs(['trip.view']);
+    renderAt('/');
+    const nav = screen.getByRole('navigation', { name: 'Main navigation' });
+    expect(within(nav).getByRole('link', { name: 'Trips' })).toBeInTheDocument();
+    expect(within(nav).queryByRole('link', { name: 'Approvals' })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole('link', { name: 'Expenses' })).not.toBeInTheDocument();
+    expect(within(nav).getByRole('link', { name: 'More' })).toBeInTheDocument();
+  });
+
+  it('shows "No access" when an unpermitted section is opened by address', () => {
+    resetAuth();
+    signInAs(['trip.view']);
+    renderAt('/approvals');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('No access');
+  });
+
+  it('shows the offline notice while the identity is not verified by the server', () => {
+    authStore.set({ verified: false });
+    renderAt('/');
+    expect(screen.getByRole('banner')).toHaveTextContent('working offline');
   });
 });
