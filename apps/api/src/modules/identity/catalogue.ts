@@ -56,20 +56,41 @@ export type Permission = (typeof PERMISSIONS)[number];
  * holds one. Without this rule an ADMIN (users.manage + roles.manage) could mint itself, or a
  * colleague whose password it controls, every power of the system except OWNER.
  */
-const ELEVATED_NAMED: readonly Permission[] = [
-  'users.manage',
-  'roles.manage',
-  'settings.manage',
-  'audit.view',
-  'tally.connector.manage',
-  'tally.mapping.approve',
-  'tally.posting.manage',
-  'finance.edit',
-  'report.financial.view',
+/**
+ * Deny by default (security review of REV-04 fix): only the permissions named here are standard,
+ * i.e. an ADMIN may put them into a custom role. Every other permission, including any added to
+ * `PERMISSIONS` later and not listed here, is elevated and OWNER-only. Finance, reconciliation,
+ * Tally data and mapping, advance settlement, operational reports and every approval are therefore
+ * elevated.
+ */
+const STANDARD_PERMISSIONS: readonly Permission[] = [
+  'party.view',
+  'party.edit',
+  'inventory.view',
+  'inventory.edit',
+  'factory.view',
+  'factory.edit',
+  'labour.view',
+  'labour.edit',
+  'attendance.record',
+  'wages.calculate',
+  'driver.view',
+  'driver.edit',
+  'fleet.view',
+  'fleet.edit',
+  'trip.view',
+  'trip.create',
+  'trip.edit',
+  'trip.close',
+  'expense.create',
+  'expense.view',
+  'advance.create',
+  'recon.view',
+  'dashboard.view',
 ];
 
 export const ELEVATED_PERMISSIONS: readonly Permission[] = PERMISSIONS.filter(
-  (code) => ELEVATED_NAMED.includes(code) || code.endsWith('.approve'),
+  (code) => !STANDARD_PERMISSIONS.includes(code),
 );
 
 const ELEVATED_SET: ReadonlySet<string> = new Set(ELEVATED_PERMISSIONS);
