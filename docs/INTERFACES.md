@@ -55,7 +55,7 @@ Permission column uses §3 codes. "scope" is applied server-side to every list a
 | GET | /audit?entityType=&entityId= | audit.view | |
 
 ### core (Phase 03)
-| POST | /attachments | any authenticated | multipart, 1 file; returns {id, sha256}; dedup by hash |
+| POST | /attachments | any authenticated | multipart, 1 file; returns {id, sha256}; dedup by hash per uploader |
 | GET | /attachments/:id | scope of linked entity | streamed, `Content-Disposition: attachment` for non-images |
 | GET | /notifications, POST /notifications/:id/read | session | |
 | GET | /health (no prefix) | public | {status, db} — no versions/secrets |
@@ -207,7 +207,7 @@ Excel/PDF exports render the same envelope, including source and as-of footer.
 ```
 core.audit.record(tx, {action, entityType, entityId, before?, after?})
 core.numbers.next(tx, sequenceName, businessDate) -> string
-core.attachments.link(tx, attachmentId, entityType, entityId, role)
+core.attachments.link(tx, attachmentId, entityType, entityId, role, actor)   // actor: RequestContext | {userId}; uploader or canRead, else NOT_FOUND
 core.jobs.enqueue(tx, kind, payload, runAt?)
 ledger.createEvent(tx, {eventType, sourceEntity, sourceId, sourceSeq?, voucherDate, narration, lines[]}) -> eventId
    // validates balance, posting-key format; enqueues posting_outbox PENDING in same tx

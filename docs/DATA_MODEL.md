@@ -19,7 +19,8 @@ Opus-approved note in DECISIONS.md.
 - `app_setting` — key pk, value jsonb, updated_by. (financial-year start, stale threshold hours, etc.)
 - `number_sequence` — (name, fiscal_year) pk, next_value bigint. Assigned via `UPDATE … RETURNING` in tx.
 - `attachment` — sha256 char(64), mime, size_bytes ≤ 10 MB, storage_key, original_name, uploaded_by,
-  device_id, scanned_ok bool. Unique (sha256) → re-upload returns existing id.
+  device_id, scanned_ok bool. Unique (sha256, uploaded_by) (migration 0005): the same user re-uploading returns their
+  existing id; another user gets their own row; rows with the same sha256 share one stored blob (same storage_key).
 - `attachment_link` — attachment_id, entity_type, entity_id, role (`BILL`,`PROOF`,`DOC`,`PHOTO`). Unique triple.
 - `audit_log` — id bigserial, at, actor_user_id, actor_agent_id, device_id, request_id, action, entity_type,
   entity_id, before jsonb, after jsonb, ip. App DB role: INSERT+SELECT only.

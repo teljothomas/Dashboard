@@ -9,6 +9,7 @@ export {
   canRead,
   saveUpload,
   type AccessResolver,
+  type LinkActor,
   type LinkRole,
   type StoredAttachment,
 } from './service.js';

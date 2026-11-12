@@ -263,19 +263,39 @@ describe('POST /api/v1/attachments', () => {
     expect(file.rawPayload.includes(Buffer.from('<script>'))).toBe(false);
   });
 
-  it('TS-S03 duplicate upload returns the same id, one row, one audit row', async () => {
+  it('TS-S03 duplicate upload by the same user returns the same id, one row, one audit row', async () => {
     const data = await jpeg();
     const first = await upload([{ data, filename: 'a.jpg' }]);
     const second = await upload([{ data, filename: 'renamed.jpg' }]);
-    const third = await upload([{ data, filename: 'by-other.jpg' }], as(OTHER));
     expect(first.statusCode).toBe(201);
     expect(second.statusCode).toBe(200);
-    expect(third.statusCode).toBe(200);
     const id = first.json<{ id: string }>().id;
     expect(second.json<{ id: string }>().id).toBe(id);
-    expect(third.json<{ id: string }>().id).toBe(id);
     expect(await count('attachment')).toBe(1);
     expect(await count('audit_log')).toBe(1);
+  });
+
+  it('another user uploading identical bytes gets an id of their own, sharing one blob', async () => {
+    const data = await jpeg();
+    const first = await upload([{ data, filename: 'a.jpg' }]);
+    const other = await upload([{ data, filename: 'by-other.jpg' }], as(OTHER));
+    expect(first.statusCode).toBe(201);
+    expect(other.statusCode).toBe(201);
+    const firstId = first.json<{ id: string }>().id;
+    const otherId = other.json<{ id: string }>().id;
+    expect(otherId).not.toBe(firstId);
+    const { rows } = await owner.query<{ uploaded_by: string; storage_key: string }>(
+      'SELECT uploaded_by, storage_key FROM attachment ORDER BY created_at',
+    );
+    expect(rows.map((r) => r.uploaded_by)).toEqual([USER, OTHER]);
+    expect(rows[0]?.storage_key).toBe(rows[1]?.storage_key);
+    // Each user reads their own row and not the other's (both unlinked: uploader only).
+    const read = (id: string, user: string): Promise<LightMyRequestResponse> =>
+      app.inject({ method: 'GET', url: `/api/v1/attachments/${id}`, headers: as(user) });
+    expect((await read(otherId, OTHER)).statusCode).toBe(200);
+    expect((await read(firstId, OTHER)).statusCode).toBe(404);
+    expect((await read(otherId, USER)).statusCode).toBe(404);
+    expect(await count('audit_log')).toBe(2);
   });
 
   it('concurrent identical uploads converge on one row', async () => {
@@ -426,7 +446,7 @@ describe('GET /api/v1/attachments/:id', () => {
     });
     await db
       .transaction()
-      .execute((tx) => core.attachments.link(tx, id, 'expense', 'exp-1', 'BILL'));
+      .execute((tx) => core.attachments.link(tx, id, 'expense', 'exp-1', 'BILL', { userId: USER }));
 
     const allowed = await app.inject({
       method: 'GET',
@@ -446,7 +466,9 @@ describe('GET /api/v1/attachments/:id', () => {
 
   it('denies a link whose entity type has no resolver (fail closed)', async () => {
     const id = await stored(PDF, 'a.pdf');
-    await db.transaction().execute((tx) => core.attachments.link(tx, id, 'trip', 't-1', 'DOC'));
+    await db
+      .transaction()
+      .execute((tx) => core.attachments.link(tx, id, 'trip', 't-1', 'DOC', { userId: USER }));
     const res = await app.inject({
       method: 'GET',
       url: `/api/v1/attachments/${id}`,
@@ -460,8 +482,8 @@ describe('GET /api/v1/attachments/:id', () => {
     core.attachments.registerAccessResolver('expense', () => false);
     core.attachments.registerAccessResolver('trip', () => true);
     await db.transaction().execute(async (tx) => {
-      await core.attachments.link(tx, id, 'expense', 'e-1', 'BILL');
-      await core.attachments.link(tx, id, 'trip', 't-1', 'PROOF');
+      await core.attachments.link(tx, id, 'expense', 'e-1', 'BILL', { userId: USER });
+      await core.attachments.link(tx, id, 'trip', 't-1', 'PROOF', { userId: USER });
     });
     const res = await app.inject({
       method: 'GET',
@@ -508,8 +530,12 @@ describe('core.attachments.link', () => {
   it('links, audits in the same transaction and is idempotent', async () => {
     const id = await seed();
     const run = (): Promise<void> =>
-      runWithContext({ userId: OTHER }, () =>
-        db.transaction().execute((tx) => core.attachments.link(tx, id, 'expense', 'exp-9', 'BILL')),
+      runWithContext({ userId: USER }, () =>
+        db
+          .transaction()
+          .execute((tx) =>
+            core.attachments.link(tx, id, 'expense', 'exp-9', 'BILL', { userId: USER }),
+          ),
       );
     await run();
     await run();
@@ -520,22 +546,72 @@ describe('core.attachments.link', () => {
       entity_type: 'expense',
       entity_id: 'exp-9',
       role: 'BILL',
-      created_by: OTHER,
+      created_by: USER,
     });
     const audit = await owner.query(`SELECT * FROM audit_log WHERE action = 'ATTACHMENT_LINKED'`);
     expect(audit.rows).toHaveLength(1);
     expect(audit.rows[0]).toMatchObject({
       entity_id: id,
-      actor_user_id: OTHER,
+      actor_user_id: USER,
       after: { entity_type: 'expense', entity_id: 'exp-9', role: 'BILL' },
     });
+  });
+
+  it('only the uploader or a user who can read it may link; others get NOT_FOUND', async () => {
+    const id = await seed();
+    const linkAs = (actor: Parameters<typeof core.attachments.link>[5]): Promise<void> =>
+      db
+        .transaction()
+        .execute((tx) => core.attachments.link(tx, id, 'expense', 'e-7', 'BILL', actor));
+    // OTHER did not upload it and has no resolver-granted read: refused, nothing written.
+    await expectAppError(linkAs({ userId: OTHER }), 'NOT_FOUND');
+    await expectAppError(
+      linkAs({
+        userId: OTHER,
+        deviceId: null,
+        permissions: [],
+        roles: [],
+        grants: [],
+        sessionId: null,
+        csrfToken: null,
+        mustChangePassword: false,
+      }),
+      'NOT_FOUND',
+    );
+    expect(await count('attachment_link')).toBe(0);
+    expect(await count("audit_log WHERE action = 'ATTACHMENT_LINKED'")).toBe(0);
+    // The uploader may.
+    await linkAs({ userId: USER });
+    expect(await count('attachment_link')).toBe(1);
+  });
+
+  it('a user who can read the attachment through an existing link may link it again', async () => {
+    const id = await seed();
+    core.attachments.registerAccessResolver('expense', (ctx) => ctx.userId === OTHER);
+    await db
+      .transaction()
+      .execute((tx) => core.attachments.link(tx, id, 'expense', 'e-1', 'BILL', { userId: USER }));
+    const reader = {
+      userId: OTHER,
+      deviceId: null,
+      permissions: [],
+      roles: [],
+      grants: [],
+      sessionId: null,
+      csrfToken: null,
+      mustChangePassword: false,
+    };
+    await db
+      .transaction()
+      .execute((tx) => core.attachments.link(tx, id, 'trip', 't-1', 'DOC', reader));
+    expect(await count('attachment_link')).toBe(2);
   });
 
   it('rolls the link and its audit row back with the caller transaction', async () => {
     const id = await seed();
     await expect(
       db.transaction().execute(async (tx) => {
-        await core.attachments.link(tx, id, 'expense', 'exp-1', 'BILL');
+        await core.attachments.link(tx, id, 'expense', 'exp-1', 'BILL', { userId: USER });
         throw new Error('abort');
       }),
     ).rejects.toThrow('abort');
@@ -551,27 +627,44 @@ describe('core.attachments.link', () => {
       db
         .transaction()
         .execute((tx) =>
-          core.attachments.link(tx, '01930000-0000-7000-8000-0000000000ff', 'expense', 'e', 'BILL'),
+          core.attachments.link(
+            tx,
+            '01930000-0000-7000-8000-0000000000ff',
+            'expense',
+            'e',
+            'BILL',
+            { userId: USER },
+          ),
         ),
       'NOT_FOUND',
     );
     await expectAppError(
-      db.transaction().execute((tx) => core.attachments.link(tx, id, 'Bad Type', 'e', 'BILL')),
-      'VALIDATION_FAILED',
-    );
-    await expectAppError(
-      db.transaction().execute((tx) => core.attachments.link(tx, id, 'expense', '', 'BILL')),
+      db
+        .transaction()
+        .execute((tx) => core.attachments.link(tx, id, 'Bad Type', 'e', 'BILL', { userId: USER })),
       'VALIDATION_FAILED',
     );
     await expectAppError(
       db
         .transaction()
-        .execute((tx) => core.attachments.link(tx, id, 'expense', 'e', 'SELFIE' as never)),
+        .execute((tx) => core.attachments.link(tx, id, 'expense', '', 'BILL', { userId: USER })),
       'VALIDATION_FAILED',
     );
-    await db.transaction().execute((tx) => core.attachments.link(tx, id, 'expense', 'e', 'BILL'));
     await expectAppError(
-      db.transaction().execute((tx) => core.attachments.link(tx, id, 'expense', 'e', 'PROOF')),
+      db
+        .transaction()
+        .execute((tx) =>
+          core.attachments.link(tx, id, 'expense', 'e', 'SELFIE' as never, { userId: USER }),
+        ),
+      'VALIDATION_FAILED',
+    );
+    await db
+      .transaction()
+      .execute((tx) => core.attachments.link(tx, id, 'expense', 'e', 'BILL', { userId: USER }));
+    await expectAppError(
+      db
+        .transaction()
+        .execute((tx) => core.attachments.link(tx, id, 'expense', 'e', 'PROOF', { userId: USER })),
       'VALIDATION_FAILED',
     );
     expect(await count('attachment_link')).toBe(1);
@@ -620,8 +713,11 @@ describe('schema', () => {
     await expect(insert({ mime: 'image/gif' })).rejects.toThrow();
     await expect(insert({ sha256: 'ABC' })).rejects.toThrow();
     await insert({});
+    // Same content by the same uploader is a duplicate; by another uploader it is allowed and
+    // shares the blob (same storage_key).
     await expect(
       insert({ id: '01930000-0000-7000-8000-0000000000bb', storage_key: 'k2' }),
     ).rejects.toThrow(/unique/i);
+    await insert({ id: '01930000-0000-7000-8000-0000000000cc', uploaded_by: OTHER });
   });
 });
