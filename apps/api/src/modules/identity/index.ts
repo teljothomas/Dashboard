@@ -47,3 +47,28 @@ export {
   revokeUserSessions,
   safeEqual,
 } from './sessions.js';
+export { registerAdminRoutes } from './adminRoutes.js';
+export {
+  completePasswordReset,
+  createUser,
+  generateResetCode,
+  getUser,
+  hashResetCode,
+  issueResetCode,
+  listUsers,
+  normalizeResetCode,
+  RESET_CODE_LENGTH,
+  RESET_CODE_TTL_MINUTES,
+  unlockUser,
+  updateUser,
+  type Caller,
+} from './adminUsers.js';
+export { createRole, getRole, listRoles, updateRole } from './roles.js';
+export {
+  listUserDevices,
+  listUserSessions,
+  revokeAllUserSessions,
+  revokeDevice,
+  revokeSessionById,
+} from './adminSessions.js';
+export { listAudit } from './auditView.js';

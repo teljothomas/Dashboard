@@ -47,12 +47,19 @@ Permission column uses §3 codes. "scope" is applied server-side to every list a
 | POST | /auth/logout | session | revokes session |
 | GET | /auth/me | session | user, roles, permissions+scopes, csrfToken |
 | POST | /auth/change-password | session | {currentPassword,newPassword}; revokes the user's other sessions |
-| POST | /auth/reset/complete | public, rate-limited | {username,code,newPassword} |
-| GET/POST/PATCH | /users, /users/:id | users.manage | create, disable, assign roles |
-| POST | /users/:id/reset-code | users.manage | returns one-time code once (OD-032) |
-| GET/POST/PATCH | /roles, /roles/:id | roles.manage | custom roles; system roles immutable |
-| GET | /users/:id/sessions, DELETE /sessions/:id | users.manage | force logout |
-| GET | /audit?entityType=&entityId= | audit.view | |
+| POST | /auth/reset/complete | public, rate-limited | {username,code,newPassword}; one generic 400 (`reason: RESET_CODE_INVALID`) for unknown user, disabled user, no live code, wrong or used code; 20 requests / 15 min per IP, 5 wrong codes / 15 min per username (429 + `Retry-After`); revokes every session, clears the lockout, `must_change_password` = false (the user chose the password) |
+| GET/POST | /users | users.manage | list (`status`, `q`, `limit`, `after` cursor); create with an admin-set temporary password (`must_change_password` = true) and optional roles `[{roleId, divisionId}]` |
+| GET/PATCH | /users/:id | users.manage | PATCH: displayName, phone, status (ACTIVE or DISABLED), roles (replaces the set). Disable revokes every session |
+| POST | /users/:id/unlock | users.manage | supersedes recent failed `login_attempt` rows with a success row (failures kept) |
+| POST | /users/:id/reset-code | users.manage | returns `{code, expiresAt}` once (OD-032); 8 chars, 30 min, single use, hashed; ACTIVE users only, never for yourself; earlier unused codes stop working |
+| GET/POST/PATCH | /roles, /roles/:id | roles.manage | custom roles; system roles refuse every PATCH (403 `SYSTEM_ROLE_IMMUTABLE`); permission set replaced as a whole |
+| GET/DELETE | /users/:id/sessions | users.manage | live sessions / force logout of all |
+| DELETE | /sessions/:id | users.manage | force logout of one session |
+| GET | /users/:id/devices | users.manage | devices registered to the user |
+| POST | /devices/:id/revoke | users.manage | device refused at login and on use, its live sessions end |
+| GET | /audit?entityType=&entityId=&action=&actorUserId=&from=&to=&limit=&before= | audit.view | newest first, keyset cursor `before` (id) |
+
+Guards on the identity admin routes (server side): `users.manage`, `roles.manage` and `audit.view` need an unlimited ALL grant (a limited grant answers 404). Only an OWNER may assign or remove the OWNER role or touch (edit, disable, unlock, reset, force-logout, revoke the device of) an owner account (403 `OWNER_ONLY`). Nobody changes their own status or roles or issues themselves a reset code (403 `SELF_MODIFICATION`). The last active OWNER cannot be disabled or lose the role (409 `LAST_OWNER`). Open for review (WP-04.6): beyond the OWNER rules an ADMIN may assign any system role and compose a custom role from any permission, even ones the ADMIN does not hold.
 
 ### core (Phase 03)
 | POST | /attachments | any authenticated | multipart, 1 file; returns {id, sha256}; dedup by hash per uploader |

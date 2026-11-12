@@ -4,22 +4,22 @@ Project: Meat Trading, Processing & Logistics ERP (working name: TradeX ERP)
 Current release: none
 Project state: FOUNDATION_IN_PROGRESS
 Application coding: STARTED (Phase 02 foundation packages and apps exist)
-Current stage: READY (WP-04.3 done; WP-04.4 next)
-Current phase: PHASE-04 (3/6)
-Current task: WP-04.4
+Current stage: READY (WP-04.4 done; WP-04.5 next)
+Current phase: PHASE-04 (4/6)
+Current task: WP-04.5
 Assigned model: Sonnet 5.5
 Last updated: 2026-11-12
-Last verified commit: WP-04.3 commit on main (`git log --oneline`)
-Next action: WP-04.4
+Last verified commit: WP-04.4 commit on main (`git log --oneline`)
+Next action: WP-04.5
 
 ## CURRENT POSITION
 
 Stage: READY
 Phase: PHASE-04 Authentication and permissions
-Task ID: WP-04.4
+Task ID: WP-04.5
 Task status: NOT_STARTED
 Branch: main (pushed to origin 2026-11-11, owner approved; later pushes still need approval, so commits after that push are local only)
-Last completed work unit: WP-04.3 authorization and scopes (Sonnet 5.5, 2026-11-12)
+Last completed work unit: WP-04.4 user and role management, password reset (Sonnet 5.5, 2026-11-12)
 
 ## PHASE TRACKER
 
@@ -31,7 +31,7 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | 01 | Architecture and contracts | COMPLETE | Baseline v1.0 (WP-01.R / 01.X run on demand) |
 | 02 | Application foundation | COMPLETE | 5/5 (gate passed 2026-11-11) |
 | 03 | Database and core services | COMPLETE | 6/6 (gate passed 2026-11-11) |
-| 04 | Authentication and permissions | IN_PROGRESS | 3/6 |
+| 04 | Authentication and permissions | IN_PROGRESS | 4/6 |
 | 05 | Tally connector read | NOT_STARTED | 0/9 |
 | 06 | Meat trading and inventory | NOT_STARTED | 0/6 |
 | 07 | Factory and labour | NOT_STARTED | 0/5 |
@@ -69,15 +69,16 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | WP-04.2 | Auth: `POST /auth/login`, `/auth/logout`, `GET /auth/me`, `POST /auth/change-password`; session plugin sets `request.ctx` (roles, grants, deviceId, csrfToken), HMAC double-submit CSRF, DB-derived lockout (5/user, 20/IP per 15 min) + in-memory request limiter, device auto-registration, must-change-password gate, contracts `identity.ts` | unit api 91 (10 new), contracts 40, web 105; integration 199 (32 new; 3 review fixes), clean runs (1 earlier unidentified failure, not reproduced); lint, typecheck, prettier, build clean; audit clean | WP-04.2 commit |
 | WP-04.3 | Authorization: `plugins/authorize.ts` (`authorize(permission, {scope})`, `sessionOnly()`, `publicRoute()` via `config.auth`; `onRoute` throws for an undeclared route; 401/403 in `onRequest`, scope resolver in `preHandler`, out of scope is 404; `app.routeInventory`), `lib/scope.ts` (`grantCovers`, `inScope`, `assertInScope`, `assertNotSelf`, `scopeWhere`), route inventory test (public allowlist, reviewed session-only list, 401 on every protected route), attachments, sync, identity and `/health` routes declared, CSRF connector exemption judged by matched route; INTERFACES §3 limiter note | unit api 128 (37 new), integration 199 (unchanged); lint, typecheck, prettier, build clean; audit clean | WP-04.3 commit |
 | WP-04.3 follow-up | Attachment dedupe per uploader: migration `0005_attachment_per_uploader.sql` (drops UNIQUE sha256 and UNIQUE storage_key, adds UNIQUE (sha256, uploaded_by) and an index on storage_key), `saveUpload` per-uploader rows sharing one blob, `core.attachments.link(..., actor)` requires uploader or `canRead` (NOT_FOUND otherwise), DATA_MODEL and INTERFACES updated | integration 202 (3 new); unit api 128; lint, typecheck, prettier, build clean; 0005 applied on dev DB; audit clean | follow-up commit |
+| WP-04.4 | User and role management, password reset: contracts (`identity.ts`), `modules/identity` `adminUsers.ts` (users list/create/update, disable revokes sessions, unlock, reset-code issue shown once, `completePasswordReset` single use), `roles.ts` (custom roles, system roles immutable), `adminSessions.ts` (sessions, devices, force logout, revoke device), `auditView.ts` (`GET /audit`), `adminRoutes.ts` (all routes, public `/auth/reset/complete` rate limited); guards OWNER_ONLY, SELF_MODIFICATION, LAST_OWNER; INTERFACES and SECURITY updated | unit api 131 (3 new), contracts 40; integration 234 (32 new, 3 full runs clean after one unreproduced failure and a test-clock fix); lint, typecheck, prettier, build clean; audit clean | WP-04.4 commit |
 
 ## ACTIVE TASK
 
-Objective: WP-04.4 user and role management, password reset.
-Assigned agent: Sonnet 5.5 (Haiku-eligible: CRUD route tests following an example)
-Required prompt: prompts/phases/PHASE-04-AUTHENTICATION-PERMISSIONS.md -> WP-04.4
-Required context files: INTERFACES §2 identity rows; SECURITY §2; OPEN_DECISIONS OD-032
-Allowed modifications: `modules/identity/**`, contracts
-Acceptance criteria: per WP-04.4. New routes must declare `config.auth` (the inventory test enforces it); add `/api/v1/auth/reset/complete` as `publicRoute()` (already on the allowlist).
+Objective: WP-04.5 web login, route guard, admin screens.
+Assigned agent: Sonnet 5.5 (Haiku-eligible: user/role forms and lists after the first Sonnet-built screen)
+Required prompt: prompts/phases/PHASE-04-AUTHENTICATION-PERMISSIONS.md -> WP-04.5
+Required context files: OFFLINE_DESIGN §5; INTERFACES §2 identity rows
+Allowed modifications: `apps/web/src/features/auth/**`, `features/admin/**`, `app/` guard and nav
+Acceptance criteria: per WP-04.5 (component tests, Playwright login → dashboard placeholder → logout, screens usable at 360 px).
 
 ## OPEN BLOCKERS
 
@@ -94,6 +95,10 @@ Acceptance criteria: per WP-04.4. New routes must declare `config.auth` (the inv
 - Later protected operations: VPS purchase/domain (Phase 14), production deploy, live data import, production posting enable (Phase 15).
 
 ## QUALITY GATE
+
+WP-04.4 (executed 2026-11-12):
+- Lint: pass; Typecheck: pass (4 packages); Prettier: pass; Unit: pass (api 131, 3 new; contracts 40); Integration: 234 pass (32 new), 3 consecutive full runs clean (an earlier full run had 1 unreproduced failure in the reset-code TTL test, suspected host vs Docker clock skew; the check now uses the database clock only); Build: pass; `pnpm audit --prod`: no known vulnerabilities
+- Not run: e2e (web untouched), security suite, secret scan, `db:migrate` (no migration)
 
 Attachment follow-up to WP-04.3 (executed 2026-11-12):
 - Lint, typecheck, prettier, build: pass; Unit: api 128; Integration: 202 pass (3 new); `db:migrate` applied 0005 on the dev DB, second run no pending; `pnpm audit --prod`: no known vulnerabilities
@@ -140,14 +145,12 @@ Phase 02 gate (WP-02.5):
 
 ## NEXT EXACT ACTION
 
-Task ID: WP-04.4
+Task ID: WP-04.5
 Phase prompt: prompts/phases/PHASE-04-AUTHENTICATION-PERMISSIONS.md
-Model: Sonnet 5.5 (Haiku: CRUD route tests after the first endpoint exists)
-Context: INTERFACES §2 identity rows; SECURITY §2; OPEN_DECISIONS OD-032
-Objective: users CRUD (disable, roles with optional division), custom roles (system roles immutable), reset-code issue (shown once) and complete (`/auth/reset/complete`, public), force logout, list sessions/devices, revoke device, `GET /audit` filtered.
-Expected output: `modules/identity/**` routes and services, contracts additions, tests per endpoint including permission denial and audit entries.
-Tests: each endpoint allow/deny, audit rows, system role immutability, reset code single use, lockout clearing (admin unlock must clear or supersede recent `login_attempt` failures; lock is derived from them, `app_user.locked_until` is unused).
-Notes from 04.3: every route needs `config: { auth: authorize('perm') | sessionOnly() | publicRoute() }` or registration throws; a new public or session-only route also needs an entry in `apps/api/test/routes.inventory.test.ts` (public allowlist already lists `/api/v1/auth/reset/complete`). Use `assertInScope`/`scopeWhere`/`assertNotSelf` from `lib/scope.ts` in services. Test header provider accepts `x-test-grants` (JSON) and `x-test-roles`. `request.ip` ignores proxies (set `trustProxy` in Phase 14). `COMMON_PASSWORDS` is a short list (replace before go-live). `startOfflineRuntime()` is still not called from `main.tsx`; WP-04.5 sets `sessionStore.userId` on login, calls `engine.resume()` after re-login, and must send `X-CSRF-Token` and `X-Device-Id` on mutations.
-Attachment blocker RESOLVED (owner approved 2026-11-12): migration 0005 `UNIQUE (sha256, uploaded_by)`, `link(..., actor)` checks uploader or `canRead`. Later modules calling `core.attachments.link` must pass the actor (a full `RequestContext`, or `{ userId }` for own uploads only).
-Open design question: one device per user is not enforced (a device keeps its first owner); ask the owner if wanted.
-After this: WP-04.5
+Model: Sonnet 5.5 (Haiku: user/role forms and lists after the first Sonnet-built screen)
+Context: OFFLINE_DESIGN §5; INTERFACES §2 identity rows (updated in WP-04.4: new routes unlock, devices, revoke device)
+Objective: login page (mobile), session bootstrap via `/auth/me`, CSRF token store, permission-aware navigation, forced change password, admin users/roles/sessions screens, logout warning when the outbox has items.
+Expected output: `apps/web/src/features/auth/**`, `features/admin/**`, app guard and nav; component tests; Playwright login → dashboard placeholder → logout; screens usable at 360 px.
+Notes from 04.4: wire contracts are in `packages/contracts/src/identity.ts` (UserDto, RoleDto, SessionDto, DeviceDto, AuditEntryDto, request schemas). Lists use `{data, meta:{nextCursor}}`. The reset code is returned once by `POST /users/:id/reset-code`; show it with a copy button and never store it. Create user takes an admin-set temporary password (user must change it at first login). 404 from users/roles/audit routes can mean a division-limited grant. Error `details.reason` values: OWNER_ONLY, SELF_MODIFICATION, LAST_OWNER, SYSTEM_ROLE_IMMUTABLE, USERNAME_TAKEN, ROLE_CODE_TAKEN, UNKNOWN_ROLE, UNKNOWN_DIVISION, UNKNOWN_PERMISSION, DUPLICATE_PERMISSION, USER_NOT_ACTIVE, RESET_CODE_INVALID. From 04.3: `startOfflineRuntime()` is not called from `main.tsx`; WP-04.5 sets `sessionStore.userId` on login, calls `engine.resume()` after re-login, and sends `X-CSRF-Token` and `X-Device-Id` on mutations. `request.ip` ignores proxies (set `trustProxy` in Phase 14). `COMMON_PASSWORDS` is a short list (replace before go-live).
+Open design questions for the owner: (1) one device per user is not enforced (a device keeps its first owner); (2) ADMIN may assign any system role and compose a custom role from any permission (only OWNER is protected); decide before WP-04.6 whether to restrict. OD-032 stays provisional (admin-issued code).
+After this: WP-04.6 (Opus review REV-04)

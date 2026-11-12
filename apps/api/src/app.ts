@@ -8,6 +8,7 @@ import {
   registerAttachmentRoutes,
   type StorageAdapter,
 } from './modules/core/attachments/index.js';
+import { registerAdminRoutes } from './modules/identity/adminRoutes.js';
 import { registerIdentityRoutes } from './modules/identity/routes.js';
 import { registerSyncRoutes } from './modules/sync/index.js';
 import { publicRoute, registerAuthorize } from './plugins/authorize.js';
@@ -77,6 +78,7 @@ export function buildApp(config: AppConfig, options: BuildAppOptions = {}): Fast
   if (!options.requestContext) {
     registerIdentityRoutes(app, config);
   }
+  registerAdminRoutes(app);
   registerSyncRoutes(app);
   registerAttachmentRoutes(app, {
     storage: options.storage ?? new LocalFsStorage(config.ATTACHMENTS_DIR),

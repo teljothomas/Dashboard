@@ -19,7 +19,7 @@
 - Sessions: 256-bit random token; DB stores SHA-256 only; idle expiry 14 days sliding (drivers in the field
   are offline for long), absolute 30 days; revoke on password change, user disable, admin force-logout.
 - Password reset: admin issues one-time 8-char code (hashed, 30 min, single use) — OD-032 may add a channel.
-- `must_change_password` on first login and after reset.
+- `must_change_password` on first login (administrator-set temporary password). A reset completes with a password the user chooses, so it clears the flag; completing a reset also revokes every session and clears the lockout.
 - Offline: the PWA never stores the password. Offline use relies on the existing cookie; if the session
   expired while offline, local capture continues but sync waits for re-login **by the same user**
   (outbox entries are tagged with user_id; a different user cannot push them).

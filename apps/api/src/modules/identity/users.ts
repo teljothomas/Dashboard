@@ -6,10 +6,12 @@ import * as audit from '../core/audit.js';
 import { checkPasswordPolicy, hashPassword, PASSWORD_PROBLEM_MESSAGE } from './password.js';
 import { seedIdentity } from './seed.js';
 
-const USERNAME_PATTERN = /^[a-z0-9][a-z0-9._-]{2,63}$/;
-const OWNER_ROLE_CODE = 'OWNER';
+export const USERNAME_PATTERN = /^[a-z0-9][a-z0-9._-]{2,63}$/;
+export const USERNAME_MESSAGE =
+  'Username must be 3 to 64 characters: lowercase letters, digits, dot, underscore or hyphen.';
+export const OWNER_ROLE_CODE = 'OWNER';
 /** Serialises owner bootstrap across processes (pg_advisory_xact_lock key, arbitrary constant). */
-const OWNER_BOOTSTRAP_LOCK = 4_004_001;
+export const OWNER_BOOTSTRAP_LOCK = 4_004_001;
 
 export interface CreateOwnerInput {
   username: string;
@@ -39,10 +41,7 @@ export async function createOwner(db: Database, input: CreateOwnerInput): Promis
   const username = normalizeUsername(input.username);
   const displayName = input.displayName.trim();
   if (!USERNAME_PATTERN.test(username)) {
-    throw new AppError(
-      'VALIDATION_FAILED',
-      'Username must be 3 to 64 characters: lowercase letters, digits, dot, underscore or hyphen.',
-    );
+    throw new AppError('VALIDATION_FAILED', USERNAME_MESSAGE);
   }
   if (displayName.length === 0) {
     throw new AppError('VALIDATION_FAILED', 'Display name is required.');
