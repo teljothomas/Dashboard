@@ -63,6 +63,13 @@ export interface SyncEngineOptions {
   db: TradexOfflineDb;
   /** Current session user. Undefined = signed out: nothing is sent. */
   getUserId: () => string | undefined;
+  /**
+   * False while the session cannot authorize a write yet (an offline start has no CSRF token until
+   * `/auth/me` answers). Nothing is sent or pulled then, no attempt is counted and no backoff set:
+   * the run is simply skipped and the verify step triggers a new one (REV-04 finding 3).
+   * Default: always true.
+   */
+  hasCredentials?: () => boolean;
   transport?: SyncTransport;
   now?: () => number;
   /** One-shot timer; returns its canceller. Injectable so tests never wait. */
@@ -131,6 +138,7 @@ class AuthExpired extends Error {
 
 export function createSyncEngine(options: SyncEngineOptions): SyncEngine {
   const { db, getUserId } = options;
+  const hasCredentials = options.hasCredentials ?? (() => true);
   const transport = options.transport ?? apiTransport;
   const now = options.now ?? (() => Date.now());
   const schedule = options.schedule ?? defaultSchedule;
@@ -402,7 +410,7 @@ export function createSyncEngine(options: SyncEngineOptions): SyncEngine {
     if (paused) {
       return result({ status: 'paused' });
     }
-    if (getUserId() === undefined) {
+    if (getUserId() === undefined || !hasCredentials()) {
       return result({ status: 'no-session' });
     }
     const forced = reason === 'manual' || reason === 'online' || reason === 'retry';

@@ -5,7 +5,7 @@ import { AppError } from '../../errors.js';
 import * as audit from '../core/audit.js';
 import type { Tx } from '../core/context.js';
 import { PERMISSIONS } from './catalogue.js';
-import type { Caller } from './adminUsers.js';
+import { assertGrantablePermissions, type Caller } from './adminUsers.js';
 
 /**
  * Role administration (WP-04.4). System roles are immutable through the API (name and permissions
@@ -100,6 +100,7 @@ export async function createRole(
   input: CreateRoleRequest,
 ): Promise<RoleDto> {
   const permissions = checkPermissions(input.permissions);
+  assertGrantablePermissions(caller, permissions);
   const id = await db.transaction().execute(async (tx) => {
     const roleId = uuidv7();
     const inserted = await tx
@@ -153,6 +154,7 @@ export async function updateRole(
 ): Promise<RoleDto> {
   const permissions =
     input.permissions === undefined ? undefined : checkPermissions(input.permissions);
+  if (permissions !== undefined) assertGrantablePermissions(caller, permissions);
   await db.transaction().execute(async (tx) => {
     const role = await tx
       .selectFrom('role')
@@ -167,6 +169,9 @@ export async function updateRole(
       });
     }
     const before = (await loadPermissions(tx, [id])).get(id) ?? [];
+    // A non-owner may neither add an elevated permission nor edit a role that already holds one
+    // (renaming included): holders of that role would otherwise answer to a non-owner.
+    assertGrantablePermissions(caller, before);
     const beforeState = { name: role.name, permissions: before };
     const afterState = {
       name: input.name ?? role.name,

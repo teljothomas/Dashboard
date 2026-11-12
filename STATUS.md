@@ -4,10 +4,10 @@ Project: Meat Trading, Processing & Logistics ERP (working name: TradeX ERP)
 Current release: none
 Project state: FOUNDATION_IN_PROGRESS
 Application coding: STARTED (Phase 02 foundation packages and apps exist)
-Current stage: READY (WP-04.5 done; WP-04.6 next)
-Current phase: PHASE-04 (5/6)
-Current task: WP-04.6
-Assigned model: Sonnet 5.5 + Opus review (REV-04)
+Current stage: READY (Phase 04 COMPLETE; WP-05.0 next)
+Current phase: PHASE-05 (0/9)
+Current task: WP-05.0
+Assigned model: Sonnet 5.5
 Last updated: 2026-11-12
 Last verified commit: WP-04.5 commit on main (`git log --oneline`)
 Next action: WP-04.6
@@ -15,11 +15,11 @@ Next action: WP-04.6
 ## CURRENT POSITION
 
 Stage: READY
-Phase: PHASE-04 Authentication and permissions
-Task ID: WP-04.6
+Phase: PHASE-05 Tally connector read
+Task ID: WP-05.0
 Task status: NOT_STARTED
 Branch: main (pushed to origin 2026-11-11, owner approved; later pushes still need approval, so commits after that push are local only)
-Last completed work unit: WP-04.5 web login, route guard, admin screens (Sonnet 5.5, 2026-11-12)
+Last completed work unit: WP-04.6 security tests, REV-04, Phase 04 gate (Sonnet 5.5 + opus-architect, 2026-11-12)
 
 ## PHASE TRACKER
 
@@ -31,8 +31,8 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | 01 | Architecture and contracts | COMPLETE | Baseline v1.0 (WP-01.R / 01.X run on demand) |
 | 02 | Application foundation | COMPLETE | 5/5 (gate passed 2026-11-11) |
 | 03 | Database and core services | COMPLETE | 6/6 (gate passed 2026-11-11) |
-| 04 | Authentication and permissions | IN_PROGRESS | 5/6 |
-| 05 | Tally connector read | NOT_STARTED | 0/9 |
+| 04 | Authentication and permissions | COMPLETE | 6/6 (gate passed 2026-11-12; REV-04 APPROVED_WITH_FIXES, fixes applied) |
+| 05 | Tally connector read | NOT_STARTED | 0/9 (next) |
 | 06 | Meat trading and inventory | NOT_STARTED | 0/6 |
 | 07 | Factory and labour | NOT_STARTED | 0/5 |
 | 08 | Drivers, fleet, loans | NOT_STARTED | 0/6 |
@@ -71,15 +71,16 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | WP-04.3 follow-up | Attachment dedupe per uploader: migration `0005_attachment_per_uploader.sql` (drops UNIQUE sha256 and UNIQUE storage_key, adds UNIQUE (sha256, uploaded_by) and an index on storage_key), `saveUpload` per-uploader rows sharing one blob, `core.attachments.link(..., actor)` requires uploader or `canRead` (NOT_FOUND otherwise), DATA_MODEL and INTERFACES updated | integration 202 (3 new); unit api 128; lint, typecheck, prettier, build clean; 0005 applied on dev DB; audit clean | follow-up commit |
 | WP-04.4 | User and role management, password reset: contracts (`identity.ts`), `modules/identity` `adminUsers.ts` (users list/create/update, disable revokes sessions, unlock, reset-code issue shown once, `completePasswordReset` single use), `roles.ts` (custom roles, system roles immutable), `adminSessions.ts` (sessions, devices, force logout, revoke device), `auditView.ts` (`GET /audit`), `adminRoutes.ts` (all routes, public `/auth/reset/complete` rate limited); guards OWNER_ONLY, SELF_MODIFICATION, LAST_OWNER; INTERFACES and SECURITY updated | unit api 131 (3 new), contracts 40; integration 234 (32 new, 3 full runs clean after one unreproduced failure and a test-clock fix); lint, typecheck, prettier, build clean; audit clean | WP-04.4 commit |
 | WP-04.5 | Web login, guard, admin screens: `features/auth` (auth store with `/auth/me` bootstrap, in-memory CSRF token, local identity copy for offline start, `RequireAuth` with forced change-password, `RequirePermission`, login, change password, reset-with-code page, sign-out with outbox-count warning), `features/admin` (users list/create/detail with roles, disable, unlock, reset code shown once with copy, sessions, devices; roles list/editor; audit log; admin chunks lazy-loaded), `features/account` More page, permission-aware nav, 401 handling in the query client, `SessionEffects` (starts sync runtime, `engine.resume()` after re-login, clears cache on sign-out) | web unit 167 (62 new); domain 57, contracts 40, api 131 unchanged; e2e 3 pass (login → placeholder → logout, nav, 360 px screens); lint, typecheck, prettier, build clean (initial JS 191.31 KB gzip); audit clean | WP-04.5 commit |
+| WP-04.6 | Security tests and REV-04: `roleMatrix.test.ts` (TS-S01 snapshot and DRIVER checks), `security.integration.test.ts` (TS-S01 over HTTP, TS-S02 OWN/DIVISION/ALL/fail-closed with identical 404 body, TS-S04 expiry, revoke, logout, force logout, device revoke, forged tokens on every route kind); REV-04 via opus-architect (`docs/reviews/REV-04.md`): APPROVED_WITH_FIXES, fixed: HIGH ADMIN privilege escalation (`ELEVATED_PERMISSIONS`, 403 `ELEVATED_ONLY`: ADMIN now manages DRIVER and SUPERVISOR only), vacuous TS-S01 assertion, sync engine `hasCredentials` (no push or pull before the CSRF token exists); trustProxy and audit redaction carried to Phase 14 and Phase 10 | unit api 136 (5 new), web 168 (1 new); integration 257 (23 new); e2e 3; lint, typecheck, prettier, build clean (initial JS 191.34 KB gzip); `db:migrate` none pending; audit clean | WP-04.6 commit |
 
 ## ACTIVE TASK
 
-Objective: WP-04.6 security tests, Opus review (REV-04), Phase 04 gate.
-Assigned agent: Sonnet 5.5 + opus-architect (REV-04)
-Required prompt: prompts/phases/PHASE-04-AUTHENTICATION-PERMISSIONS.md -> WP-04.6
-Required context files: QUALITY_GATES §4 (TS-S01, S02, S04); review template
-Allowed modifications: api security tests, review packet under docs/reviews, STATUS/QUALITY_GATES
-Acceptance criteria: per WP-04.6 (tests pass; REV-04 APPROVED or pending recorded).
+Objective: WP-05.0 prerequisites check (.NET 10 SDK), then WP-05.1.
+Assigned agent: Sonnet 5.5
+Required prompt: prompts/phases/PHASE-05-TALLY-CONNECTOR-READ.md -> WP-05.0
+Required context files: none beyond the WP
+Allowed modifications: per WP
+Acceptance criteria: per WP-05.0 (dotnet --list-sdks shows 10.x, else BLOCKED and continue with WP-05.1 and WP-05.2).
 
 ## OPEN BLOCKERS
 
@@ -89,6 +90,7 @@ Acceptance criteria: per WP-04.6 (tests pass; REV-04 APPROVED or pending recorde
 ## OWNER APPROVAL REQUIRED
 
 - Answer docs/discovery/*.md (non-blocking until Phase 05.7/11/15): TALLY_DISCOVERY.md (owner/Tally PC), OWNER_QUESTIONS.md (owner), CA_QUESTIONS.md (CA). Register: docs/OPEN_DECISIONS.md.
+- REV-04 owner follow-ups (non-blocking): (1) confirm the ADMIN restriction (ADMIN manages only DRIVER and SUPERVISOR; OWNER manages ACCOUNTANT, FACTORY_MANAGER, ADMIN) or ask for it to be relaxed; (2) confirm ACCOUNTANT holds `tally.connector.manage` and `audit.view` through the wildcards `tally.*` and `*.view` (REV-04 LOW 6); (3) shared devices accepted (a device keeps its first owner); OD-032 stays provisional.
 - Pushing: owner approved first push 2026-11-11 (main → origin). Further pushes need approval per ADR-063.
 - Engage a CA/accountant for ACCT decisions (OD-010..022, OD-033, OD-047, OD-048) before Phase 11 production work.
 - Keep Docker Desktop running for DB work (verified running 2026-11-11, dev DB container `tradex-dev-db-1` is up, migrated to 0005).
@@ -96,6 +98,10 @@ Acceptance criteria: per WP-04.6 (tests pass; REV-04 APPROVED or pending recorde
 - Later protected operations: VPS purchase/domain (Phase 14), production deploy, live data import, production posting enable (Phase 15).
 
 ## QUALITY GATE
+
+Phase 04 gate (WP-04.6, executed 2026-11-12):
+- Lint: pass; Typecheck: pass (4 packages); Prettier: pass; Unit: pass (domain 57, contracts 40, api 136, web 168); Integration: 257 pass (a first run of the admin suite timed out 6 tests under host load, the same command re-run alone passed 38/38, then the full suite passed); `db:migrate`: none pending (5 applied); Build: pass (web initial JS 191.34 KB gzip); E2E: 3 pass (fake API, not the real API); `pnpm audit --prod`: no known vulnerabilities; Security tests TS-S01, TS-S02, TS-S04: pass
+- Not run: secret scan (gitleaks not installed), backup/restore, CI YAML validation, a browser test against the real API
 
 WP-04.5 (executed 2026-11-12):
 - Lint: pass; Typecheck: pass (4 packages); Prettier: pass; Unit: pass (domain 57, contracts 40, api 131, web 167 with 62 new); Build: pass (web initial JS 191.31 KB gzip, up from 147.48 because the offline runtime is now reachable from the entry; admin screens are lazy chunks); E2E: 3 pass (Playwright against a `page.route` fake API, not the real API); `pnpm audit --prod`: no known vulnerabilities
@@ -150,12 +156,10 @@ Phase 02 gate (WP-02.5):
 
 ## NEXT EXACT ACTION
 
-Task ID: WP-04.6
-Phase prompt: prompts/phases/PHASE-04-AUTHENTICATION-PERMISSIONS.md
-Model: Sonnet 5.5 + Opus review (REV-04)
-Context: QUALITY_GATES §4 (TS-S01, S02, S04); review template
-Objective: security tests TS-S02 (other user's record via test entity gives 404), TS-S04 (expired or revoked session gives 401), TS-S01 baseline (DRIVER lacks `report.financial.view`; snapshot test of default role grants); review packet for Opus (auth plugin, session, CSRF, rate limit, scope helper, plus the new web auth store and offline identity copy); Phase 04 gate (full suite incl. integration, db:migrate, build, e2e, audit).
-Expected output: api security tests, `docs/reviews` packet for REV-04 (run via `opus-architect` if available, else record "REV-04 pending" under OWNER APPROVAL REQUIRED), STATUS next WP-05.0.
-Notes from 04.5: the web client keeps a local identity copy (`tradex.identity`) for offline start and refuses an offline logout (SECURITY §2); Playwright e2e uses a fake API via `page.route`, so no browser test has run against the real API (consider one in the Phase 04 gate or Phase 14). No `GET /divisions` endpoint exists: the admin UI cannot pick a division limiter for new role assignments (existing limiters are kept); add the endpoint when the first division-aware screen needs it. `request.ip` ignores proxies (set `trustProxy` in Phase 14). `COMMON_PASSWORDS` is a short list (replace before go-live). Initial JS is 191.31 KB gzip.
-Open design questions for the owner: (1) one device per user is not enforced (a device keeps its first owner); (2) ADMIN may assign any system role and compose a custom role from any permission (only OWNER is protected); decide before closing REV-04 whether to restrict. OD-032 stays provisional (admin-issued code).
-After this: WP-05.0 (Phase 05 Tally connector read; needs the .NET 10 SDK on the dev PC)
+Task ID: WP-05.0
+Phase prompt: prompts/phases/PHASE-05-TALLY-CONNECTOR-READ.md
+Model: Sonnet 5.5
+Context: the WP only
+Objective: verify `dotnet --list-sdks` shows 10.x. Absent on this PC (verified 2026-11-11): mark WP-05.0 BLOCKED (OWNER APPROVAL REQUIRED: install .NET 10 SDK) and execute WP-05.1 (docs part, TALLY_INTEGRATION §4/§8 verification) and WP-05.2 (cloud side, Node only) meanwhile.
+Expected output: STATUS update, TASK_LOG line, WP-05.1 rows and fixtures.
+Carry-over gate items: PHASE-10 section B (`GET /audit` redaction), PHASE-14 section C/D (`trustProxy`, full common-password list). The web e2e still uses a fake API: consider one real-API browser run in Phase 14. No `GET /divisions` endpoint yet; add it with the first division-aware screen.

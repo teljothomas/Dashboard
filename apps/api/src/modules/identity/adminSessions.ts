@@ -4,7 +4,7 @@ import type { Database } from '../../db/index.js';
 import { AppError } from '../../errors.js';
 import * as audit from '../core/audit.js';
 import type { Tx } from '../core/context.js';
-import { assertManageable, loadAssignments, type Caller } from './adminUsers.js';
+import { assertManageable, type Caller } from './adminUsers.js';
 import { revokeSession, revokeUserSessions } from './sessions.js';
 
 /**
@@ -15,11 +15,6 @@ import { revokeSession, revokeUserSessions } from './sessions.js';
 async function requireUser(db: Tx, id: string): Promise<void> {
   const row = await db.selectFrom('app_user').select('id').where('id', '=', id).executeTakeFirst();
   if (!row) throw new AppError('NOT_FOUND', 'Not found');
-}
-
-async function roleCodesOf(db: Tx, userIds: string[]): Promise<string[]> {
-  const map = await loadAssignments(db, userIds);
-  return [...map.values()].flatMap((list) => list.map((item) => item.roleCode));
 }
 
 /** Live sessions only: not revoked, inside both expiries. */
@@ -89,7 +84,7 @@ export async function revokeSessionById(
       .where('id', '=', sessionId)
       .executeTakeFirst();
     if (!session) throw new AppError('NOT_FOUND', 'Not found');
-    assertManageable(caller, await roleCodesOf(tx, [session.user_id]));
+    await assertManageable(tx, caller, [session.user_id]);
     const revoked = await revokeSession(tx, sessionId);
     if (revoked) {
       await audit.record(tx, {
@@ -113,7 +108,7 @@ export async function revokeAllUserSessions(
 ): Promise<number> {
   return db.transaction().execute(async (tx) => {
     await requireUser(tx, userId);
-    assertManageable(caller, await roleCodesOf(tx, [userId]));
+    await assertManageable(tx, caller, [userId]);
     const count = await revokeUserSessions(tx, userId, null);
     await audit.record(tx, {
       action: 'user.sessions.revoke',
@@ -153,7 +148,7 @@ export async function revokeDevice(
       .where('revoked_at', 'is', null)
       .execute();
     const affected = [...new Set([device.user_id, ...sessions.map((row) => row.user_id)])];
-    assertManageable(caller, await roleCodesOf(tx, affected));
+    await assertManageable(tx, caller, affected);
 
     if (device.revoked_at === null) {
       await tx

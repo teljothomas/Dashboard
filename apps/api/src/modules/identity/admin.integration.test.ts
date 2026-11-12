@@ -1018,3 +1018,186 @@ describe('audit view', () => {
     expect(JSON.stringify(entries)).not.toMatch(/code_hash|password_hash/);
   });
 });
+
+describe('elevated permissions are owner-only (REV-04 finding 1)', () => {
+  const reasonOf = (res: LightMyRequestResponse) => errorOf(res).details?.reason;
+
+  async function mkRole(code: string, permissions: string[]): Promise<string> {
+    const res = await call(await login('asha.owner'), 'POST', '/roles', {
+      code,
+      name: code,
+      permissions: permissions.map((permission) => ({ permission, scope: 'ALL' })),
+    });
+    expect(res.statusCode).toBe(201);
+    return data<{ id: string }>(res).id;
+  }
+
+  it('an ADMIN cannot build a custom role holding an elevated permission', async () => {
+    await mkUser('adm.in', 'ADMIN');
+    const admin = await login('adm.in');
+    for (const permission of [
+      'tally.posting.manage',
+      'report.financial.view',
+      'expense.approve',
+      'users.manage',
+    ]) {
+      const res = await call(admin, 'POST', '/roles', {
+        code: 'ESCALATE',
+        name: 'Escalate',
+        permissions: [{ permission, scope: 'ALL' }],
+      });
+      expect(res.statusCode, permission).toBe(403);
+      expect(reasonOf(res), permission).toBe('ELEVATED_ONLY');
+    }
+    expect(await rows(`SELECT 1 FROM role WHERE code = 'ESCALATE'`)).toHaveLength(0);
+
+    const plain = await call(admin, 'POST', '/roles', {
+      code: 'YARD_VIEWER',
+      name: 'Yard viewer',
+      permissions: [
+        { permission: 'inventory.view', scope: 'DIVISION' },
+        { permission: 'trip.view', scope: 'ALL' },
+      ],
+    });
+    expect(plain.statusCode).toBe(201);
+  });
+
+  it('an ADMIN cannot add an elevated permission to, or edit, a role that holds one', async () => {
+    const safe = await mkRole('SAFE_ROLE', ['trip.view']);
+    const risky = await mkRole('RISKY_ROLE', ['report.financial.view']);
+    await mkUser('adm.in', 'ADMIN');
+    const admin = await login('adm.in');
+
+    const add = await call(admin, 'PATCH', `/roles/${safe}`, {
+      permissions: [
+        { permission: 'trip.view', scope: 'ALL' },
+        { permission: 'advance.approve', scope: 'ALL' },
+      ],
+    });
+    expect(add.statusCode).toBe(403);
+    expect(reasonOf(add)).toBe('ELEVATED_ONLY');
+
+    const strip = await call(admin, 'PATCH', `/roles/${risky}`, { permissions: [] });
+    expect(strip.statusCode).toBe(403);
+    const rename = await call(admin, 'PATCH', `/roles/${risky}`, { name: 'Harmless' });
+    expect(rename.statusCode).toBe(403);
+    expect(reasonOf(rename)).toBe('ELEVATED_ONLY');
+
+    const fine = await call(admin, 'PATCH', `/roles/${safe}`, {
+      permissions: [{ permission: 'fleet.view', scope: 'ALL' }],
+    });
+    expect(fine.statusCode).toBe(200);
+
+    // The owner is unrestricted.
+    const owner = await login('asha.owner');
+    expect(
+      (await call(owner, 'PATCH', `/roles/${risky}`, { name: 'Renamed by owner' })).statusCode,
+    ).toBe(200);
+  });
+
+  it('an ADMIN cannot assign a role that holds an elevated permission, on create or update', async () => {
+    const risky = await mkRole('RISKY_ROLE', ['tally.posting.manage']);
+    const driverId = await mkUser('plain.driver', 'DRIVER');
+    await mkUser('adm.in', 'ADMIN');
+    const admin = await login('adm.in');
+
+    for (const roleIdValue of [await roleId('ACCOUNTANT'), await roleId('ADMIN'), risky]) {
+      const created = await call(admin, 'POST', '/users', {
+        username: 'new.person',
+        displayName: 'N',
+        password: TEMP_PASSWORD,
+        roles: [{ roleId: roleIdValue }],
+      });
+      expect(created.statusCode).toBe(403);
+      expect(reasonOf(created)).toBe('ELEVATED_ONLY');
+      const updated = await call(admin, 'PATCH', `/users/${driverId}`, {
+        roles: [{ roleId: roleIdValue }],
+      });
+      expect(updated.statusCode).toBe(403);
+      expect(reasonOf(updated)).toBe('ELEVATED_ONLY');
+    }
+    expect(await rows(`SELECT 1 FROM app_user WHERE username = 'new.person'`)).toHaveLength(0);
+
+    const ok = await call(admin, 'PATCH', `/users/${driverId}`, {
+      roles: [{ roleId: await roleId('SUPERVISOR'), divisionId: await divisionId() }],
+    });
+    expect(ok.statusCode).toBe(200);
+  });
+
+  it('an ADMIN cannot touch a user who holds an elevated role, not even another ADMIN', async () => {
+    const names = ['amy.accountant', 'other.admin', 'fay.factory'];
+    const targets = [
+      await mkUser(names[0] as string, 'ACCOUNTANT'),
+      await mkUser(names[1] as string, 'ADMIN'),
+      await mkUser(names[2] as string, 'FACTORY_MANAGER'),
+    ];
+    await mkUser('adm.in', 'ADMIN');
+    const admin = await login('adm.in');
+    for (const [index, target] of targets.entries()) {
+      const session = await login(names[index] as string);
+      const sessions = data<{ id: string }[]>(
+        await call(await login('asha.owner'), 'GET', `/users/${target}/sessions`),
+      );
+      const attempts: ['POST' | 'PATCH' | 'DELETE', string, unknown?][] = [
+        ['PATCH', `/users/${target}`, { displayName: 'Hacked' }],
+        ['PATCH', `/users/${target}`, { status: 'DISABLED' }],
+        ['POST', `/users/${target}/unlock`],
+        ['POST', `/users/${target}/reset-code`],
+        ['DELETE', `/users/${target}/sessions`],
+        ['DELETE', `/sessions/${sessions[0]?.id ?? uuidv7()}`],
+        ['POST', `/devices/${session.deviceId}/revoke`],
+      ];
+      for (const [method, url, payload] of attempts) {
+        const res = await call(admin, method, url, payload);
+        expect(res.statusCode, `${method} ${url}`).toBe(403);
+        expect(reasonOf(res), `${method} ${url}`).toBe('ELEVATED_ONLY');
+      }
+      // Nothing happened to the target.
+      expect((await call(session, 'GET', '/auth/me')).statusCode).toBe(200);
+    }
+    expect(
+      await rows(
+        `SELECT 1 FROM password_reset
+          WHERE issued_by = (SELECT id FROM app_user WHERE username = 'adm.in')`,
+      ),
+    ).toHaveLength(0);
+  });
+
+  it('an ADMIN still manages DRIVER and SUPERVISOR accounts and edits their own profile', async () => {
+    const driverId = await mkUser('plain.driver', 'DRIVER');
+    const supId = await mkUser('sue.supervisor', 'SUPERVISOR', { divisionId: await divisionId() });
+    const adminId = await mkUser('adm.in', 'ADMIN');
+    const admin = await login('adm.in');
+    for (const target of [driverId, supId]) {
+      expect(
+        (await call(admin, 'PATCH', `/users/${target}`, { displayName: 'Renamed' })).statusCode,
+      ).toBe(200);
+      expect((await call(admin, 'POST', `/users/${target}/unlock`)).statusCode).toBe(200);
+      const reset = await call(admin, 'POST', `/users/${target}/reset-code`);
+      expect(reset.statusCode).toBe(200);
+      expect((await call(admin, 'DELETE', `/users/${target}/sessions`)).statusCode).toBe(200);
+    }
+    expect(
+      (await call(admin, 'PATCH', `/users/${adminId}`, { displayName: 'Me' })).statusCode,
+    ).toBe(200);
+  });
+
+  it('the OWNER manages elevated users and roles without restriction', async () => {
+    const accountant = await mkUser('amy.accountant', 'ACCOUNTANT');
+    const owner = await login('asha.owner');
+    expect(
+      (await call(owner, 'PATCH', `/users/${accountant}`, { displayName: 'Amy' })).statusCode,
+    ).toBe(200);
+    expect((await call(owner, 'POST', `/users/${accountant}/reset-code`)).statusCode).toBe(200);
+    expect(
+      (
+        await call(owner, 'POST', '/users', {
+          username: 'second.admin',
+          displayName: 'S',
+          password: TEMP_PASSWORD,
+          roles: [{ roleId: await roleId('ADMIN') }],
+        })
+      ).statusCode,
+    ).toBe(201);
+  });
+});

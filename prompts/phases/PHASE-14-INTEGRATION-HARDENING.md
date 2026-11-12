@@ -14,6 +14,7 @@ section (append) and are fixed within scope.
 ## C/D. Phase-wide requirements
 No secrets in images or git; containers non-root; Postgres not publicly reachable; Tally port never published; production data
 never used in tests.
+REV-04 carry-over (gate item): set Fastify `trustProxy` to the exact proxy address or hop count (never `true`) in the WP that introduces the reverse proxy, and test that a forged `X-Forwarded-For` from a non-proxy source is ignored; without it every client shares the proxy IP and the IP lockout and limiters become global (DoS). Do not deploy behind a proxy before this. Also replace `COMMON_PASSWORDS` with a full list before go-live.
 
 ---
 

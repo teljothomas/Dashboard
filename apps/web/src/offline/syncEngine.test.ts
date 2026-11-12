@@ -603,6 +603,39 @@ describe('failures and backoff', () => {
     expect((await engine.trigger('manual')).status).toBe('no-session');
     expect(server.pushes).toHaveLength(0);
   });
+
+  it('sends and pulls nothing while the session has no credentials (offline start), then runs once it has (REV-04)', async () => {
+    const server = installServer();
+    const entry = await create();
+    let credentials = false;
+    const guarded = createSyncEngine({
+      db,
+      getUserId: () => user,
+      hasCredentials: () => credentials,
+      locks: null,
+      schedule: (fn, ms) => {
+        timers.push({ fn, ms });
+        return () => undefined;
+      },
+    });
+
+    for (const reason of ['start', 'online', 'manual', 'retry'] as const) {
+      expect((await guarded.trigger(reason)).status).toBe('no-session');
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(server.pushes).toHaveLength(0);
+    expect(server.pulls).toHaveLength(0);
+    // Not a failed attempt: no counter, no error, no backoff, no pause.
+    const row = await db.outbox.get(entry.mutationId);
+    expect(row?.attempts).toBe(0);
+    expect(row?.lastError).toBeNull();
+    expect(row?.state).toBe('PENDING');
+    expect(guarded.isPaused()).toBe(false);
+
+    credentials = true;
+    expect((await guarded.trigger('online')).status).toBe('ok');
+    expect(server.pushes).toHaveLength(1);
+  });
 });
 
 describe('401 pause', () => {

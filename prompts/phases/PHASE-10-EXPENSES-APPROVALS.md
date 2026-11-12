@@ -13,6 +13,7 @@ Executed after Phase 06 and before Phase 07 (ADR-060).
 
 ## B. Context rules
 STATUS.md → registry → this WP → Context only. Do not load Tally agent code. Posting beyond PENDING is Phase 11.
+REV-04 carry-over (before the first financial module writes audit rows): `GET /audit` (`modules/identity/auditView.ts`) returns before/after of every entity to every `audit.view` holder (ADMIN). Filter or redact rows by an entity-type to view-permission map (no rows for an unmapped type unless OWNER) and add a test.
 
 ## C/D. Phase-wide requirements
 Money via domain money; events balanced (DB trigger + domain check); events immutable; one event per (source, type, seq);

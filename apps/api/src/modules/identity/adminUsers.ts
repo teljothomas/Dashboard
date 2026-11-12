@@ -15,6 +15,7 @@ import { AppError } from '../../errors.js';
 import type { RequestContext } from '../../plugins/requestContext.js';
 import * as audit from '../core/audit.js';
 import type { ActorContext, Tx } from '../core/context.js';
+import { ELEVATED_PERMISSIONS, isElevatedPermission } from './catalogue.js';
 import {
   checkPasswordPolicy,
   hashPassword,
@@ -35,7 +36,9 @@ import {
  * caller's request context for the guards below and the audit actor. Guards, all server side:
  *
  * - Only an OWNER may assign or remove the OWNER role, or touch (edit, disable, unlock, reset,
- *   force-logout) a user who holds it.
+ *   force-logout) a user who holds it (OWNER_ONLY). The same holds for any role that carries an
+ *   elevated permission (`ELEVATED_PERMISSIONS`, REV-04): assigning it, building it, or managing a
+ *   user who has it (ELEVATED_ONLY).
  * - Nobody changes their own status or roles, or issues a reset code for themselves.
  * - The last active OWNER cannot be disabled or lose the role (serialised with an advisory lock).
  * - Passwords and reset codes never reach the audit log or a response, except the one-time code.
@@ -222,9 +225,60 @@ async function lockTarget(
   return { ...row, roleCodes: (roles.get(id) ?? []).map((role) => role.roleCode) };
 }
 
-/** Owner accounts are managed by owners only. */
-export function assertManageable(caller: Caller, targetRoleCodes: readonly string[]): void {
-  if (targetRoleCodes.includes(OWNER_ROLE_CODE) && !isOwner(caller.ctx)) throw ownerOnly();
+function elevatedOnly(): AppError {
+  return new AppError(
+    'FORBIDDEN',
+    'Only an owner can grant or manage roles and users that hold administrative, financial-report or approval permissions.',
+    { reason: 'ELEVATED_ONLY' },
+  );
+}
+
+/** Do any of these roles hold an elevated permission? */
+export async function rolesHoldElevated(tx: Tx, roleIds: readonly string[]): Promise<boolean> {
+  if (roleIds.length === 0) return false;
+  const row = await tx
+    .selectFrom('role_permission')
+    .select('role_id')
+    .where('role_id', 'in', [...roleIds])
+    .where('permission_code', 'in', [...ELEVATED_PERMISSIONS])
+    .limit(1)
+    .executeTakeFirst();
+  return row !== undefined;
+}
+
+/** Non-owners may not put an elevated permission into a role. */
+export function assertGrantablePermissions(
+  caller: Caller,
+  permissions: readonly { permission: string }[],
+): void {
+  if (isOwner(caller.ctx)) return;
+  if (permissions.some((item) => isElevatedPermission(item.permission))) throw elevatedOnly();
+}
+
+/**
+ * Users are managed by owners only when they hold the OWNER role (OWNER_ONLY) or any role with an
+ * elevated permission (ELEVATED_ONLY). The caller's own record is exempt: nothing is gained by
+ * touching yourself that the self-modification guards do not already govern.
+ */
+export async function assertManageable(
+  tx: Tx,
+  caller: Caller,
+  userIds: readonly string[],
+): Promise<void> {
+  if (isOwner(caller.ctx)) return;
+  const others = [...new Set(userIds)].filter((id) => id !== caller.ctx.userId);
+  if (others.length === 0) return;
+  const assignments = await loadAssignments(tx, others);
+  const held = [...assignments.values()].flat();
+  if (held.some((item) => item.roleCode === OWNER_ROLE_CODE)) throw ownerOnly();
+  if (
+    await rolesHoldElevated(
+      tx,
+      held.map((item) => item.roleId),
+    )
+  ) {
+    throw elevatedOnly();
+  }
 }
 
 async function lockOwners(tx: Tx): Promise<void> {
@@ -302,8 +356,16 @@ async function resolveAssignments(
     roleCode: codeById.get(item.roleId) as string,
     divisionId: item.divisionId,
   }));
-  if (resolved.some((item) => item.roleCode === OWNER_ROLE_CODE) && !isOwner(caller.ctx)) {
-    throw ownerOnly();
+  if (!isOwner(caller.ctx)) {
+    if (resolved.some((item) => item.roleCode === OWNER_ROLE_CODE)) throw ownerOnly();
+    if (
+      await rolesHoldElevated(
+        tx,
+        resolved.map((item) => item.roleId),
+      )
+    ) {
+      throw elevatedOnly();
+    }
   }
   return resolved;
 }
@@ -401,7 +463,7 @@ export async function updateUser(
     // Owner-touching changes are serialised so two owners cannot demote each other at once.
     if (input.status !== undefined || input.roles !== undefined) await lockOwners(tx);
     const target = await lockTarget(tx, id);
-    assertManageable(caller, target.roleCodes);
+    await assertManageable(tx, caller, [id]);
 
     const current = await tx
       .selectFrom('app_user')
@@ -536,7 +598,7 @@ export async function updateUser(
 export async function unlockUser(db: Database, caller: Caller, id: string): Promise<void> {
   await db.transaction().execute(async (tx) => {
     const target = await lockTarget(tx, id);
-    assertManageable(caller, target.roleCodes);
+    await assertManageable(tx, caller, [id]);
     await tx
       .insertInto('login_attempt')
       .values({ username: target.username, ip: null, success: true })
@@ -575,7 +637,7 @@ export async function issueResetCode(
   const codeHash = hashResetCode(id, code);
   const issued = await db.transaction().execute(async (tx) => {
     const target = await lockTarget(tx, id);
-    assertManageable(caller, target.roleCodes);
+    await assertManageable(tx, caller, [id]);
     if (target.status !== 'ACTIVE') {
       throw new AppError('INVALID_TRANSITION', 'The user is not active.', {
         reason: 'USER_NOT_ACTIVE',

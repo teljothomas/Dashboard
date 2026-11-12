@@ -50,6 +50,34 @@ export const PERMISSIONS = [
 
 export type Permission = (typeof PERMISSIONS)[number];
 
+/**
+ * Elevated permissions (REV-04 finding 1): administration, financial reporting and every approval.
+ * Only an OWNER may put one into a custom role, assign a role that holds one, or manage a user who
+ * holds one. Without this rule an ADMIN (users.manage + roles.manage) could mint itself, or a
+ * colleague whose password it controls, every power of the system except OWNER.
+ */
+const ELEVATED_NAMED: readonly Permission[] = [
+  'users.manage',
+  'roles.manage',
+  'settings.manage',
+  'audit.view',
+  'tally.connector.manage',
+  'tally.mapping.approve',
+  'tally.posting.manage',
+  'finance.edit',
+  'report.financial.view',
+];
+
+export const ELEVATED_PERMISSIONS: readonly Permission[] = PERMISSIONS.filter(
+  (code) => ELEVATED_NAMED.includes(code) || code.endsWith('.approve'),
+);
+
+const ELEVATED_SET: ReadonlySet<string> = new Set(ELEVATED_PERMISSIONS);
+
+export function isElevatedPermission(code: string): boolean {
+  return ELEVATED_SET.has(code);
+}
+
 export const SCOPES = ['OWN', 'DIVISION', 'ALL'] as const;
 export type Scope = (typeof SCOPES)[number];
 

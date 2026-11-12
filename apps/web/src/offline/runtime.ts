@@ -15,7 +15,12 @@ export function getOfflineRuntime(): OfflineRuntime {
     const db = getOfflineDb();
     runtime = {
       db,
-      engine: createSyncEngine({ db, getUserId: () => sessionStore.get().userId }),
+      engine: createSyncEngine({
+        db,
+        getUserId: () => sessionStore.get().userId,
+        // No CSRF token (offline start, not yet verified) means a write would be refused: wait.
+        hasCredentials: () => sessionStore.get().csrfToken !== undefined,
+      }),
     };
   }
   return runtime;
