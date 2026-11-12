@@ -5,24 +5,28 @@ import { ErrorEnvelope } from '@tradex/contracts';
 import { isUuidV7 } from '@tradex/domain';
 import { buildApp, BODY_LIMIT_BYTES } from './app.js';
 import { AppError } from './errors.js';
+import { publicRoute } from './plugins/authorize.js';
 import { SECURITY_HEADERS } from './plugins/securityHeaders.js';
 import { testConfig } from './test-config.js';
 import { createDummyDatabase, createFailingDatabase } from '../test/dummyDb.js';
 
 let app: FastifyInstance | undefined;
 
+/** Test routes need an auth declaration like any other route. */
+const OPEN = { config: { auth: publicRoute() } };
+
 function makeApp(): FastifyInstance {
   const instance = buildApp(testConfig, { db: createDummyDatabase() });
-  instance.get('/_test/app-error', () => {
+  instance.get('/_test/app-error', OPEN, () => {
     throw new AppError('CONFLICT_VERSION', 'Version mismatch', { server: { version: 7 } });
   });
-  instance.get('/_test/boom', () => {
+  instance.get('/_test/boom', OPEN, () => {
     throw new Error('db password is hunter2');
   });
-  instance.get('/_test/zod', () => {
+  instance.get('/_test/zod', OPEN, () => {
     z.object({ amount: z.string() }).parse({ amount: 5 });
   });
-  instance.post('/_test/echo', (request) => ({ body: request.body }));
+  instance.post('/_test/echo', OPEN, (request) => ({ body: request.body }));
   app = instance;
   return instance;
 }

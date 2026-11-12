@@ -8,6 +8,7 @@ import type { SessionInfo } from '@tradex/contracts';
 import { uuidv7 } from '@tradex/domain';
 import { MIGRATIONS_DIR, resetDatabase, testDbUrls, truncateAll } from '../../../test/db.js';
 import { buildApp } from '../../app.js';
+import { publicRoute } from '../../plugins/authorize.js';
 import { createDatabase, type Database } from '../../db/index.js';
 import { runMigrations } from '../../db/migrate.js';
 import { testConfig } from '../../test-config.js';
@@ -598,7 +599,7 @@ describe('CSRF', () => {
 
   it('exempts /connector/ paths (signature auth)', async () => {
     const instance = makeApp();
-    instance.post('/connector/v1/_test', () => ({ ok: true }));
+    instance.post('/connector/v1/_test', { config: { auth: publicRoute() } }, () => ({ ok: true }));
     const session = await loginOk(instance);
     const res = await instance.inject({
       method: 'POST',

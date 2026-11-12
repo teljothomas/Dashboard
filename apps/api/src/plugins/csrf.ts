@@ -25,7 +25,9 @@ export function registerCsrf(app: FastifyInstance): void {
     const expected = request.ctx?.csrfToken;
     if (expected === null || expected === undefined) return done();
     if (request.routeOptions.config.csrfExempt === true) return done();
-    if (EXEMPT_PREFIXES.some((prefix) => request.url.startsWith(prefix))) return done();
+    // Judged by the matched route, never the raw URL (the router percent-decodes paths).
+    const route = request.routeOptions.url ?? '';
+    if (EXEMPT_PREFIXES.some((prefix) => route.startsWith(prefix))) return done();
     const sent = request.headers['x-csrf-token'];
     if (typeof sent === 'string' && safeEqual(sent, expected)) return done();
     done(new AppError('FORBIDDEN', 'CSRF token missing or invalid.', { reason: 'CSRF' }));

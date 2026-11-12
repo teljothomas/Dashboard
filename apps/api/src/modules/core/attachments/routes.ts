@@ -2,6 +2,7 @@ import multipart from '@fastify/multipart';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { AppError } from '../../../errors.js';
+import { sessionOnly } from '../../../plugins/authorize.js';
 import { actorOf, requireContext } from '../../../plugins/requestContext.js';
 import { canRead, saveUpload } from './service.js';
 import { MAX_ATTACHMENT_BYTES, processUpload } from './sniff.js';
@@ -40,7 +41,10 @@ export function registerAttachmentRoutes(
 
       api.post(
         '/attachments',
-        { bodyLimit: MAX_ATTACHMENT_BYTES + MULTIPART_OVERHEAD_BYTES },
+        {
+          bodyLimit: MAX_ATTACHMENT_BYTES + MULTIPART_OVERHEAD_BYTES,
+          config: { auth: sessionOnly() },
+        },
         async (request, reply) => {
           const ctx = requireContext(request);
           if (!request.isMultipart()) {
@@ -94,7 +98,7 @@ export function registerAttachmentRoutes(
         },
       );
 
-      api.get('/attachments/:id', async (request, reply) => {
+      api.get('/attachments/:id', { config: { auth: sessionOnly() } }, async (request, reply) => {
         const ctx = requireContext(request);
         const parsed = IdParam.safeParse(request.params);
         // Not-found for every refusal: no hint whether an id exists to someone who may not read it.

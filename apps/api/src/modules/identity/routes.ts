@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import { ChangePasswordRequest, LoginRequest } from '@tradex/contracts';
 import type { AppConfig } from '../../config.js';
 import { AppError } from '../../errors.js';
+import { publicRoute, sessionOnly } from '../../plugins/authorize.js';
 import { rateLimited, rateLimitHook, SlidingWindowLimiter } from '../../plugins/rateLimit.js';
 import { clearedSessionCookie, sessionCookie } from '../../plugins/session.js';
 import { actorOf, requireContext } from '../../plugins/requestContext.js';
@@ -33,7 +34,7 @@ export function registerIdentityRoutes(app: FastifyInstance, config: AppConfig):
       api.post(
         '/auth/login',
         {
-          config: { csrfExempt: true },
+          config: { csrfExempt: true, auth: publicRoute() },
           preHandler: rateLimitHook(loginLimiter, (request) => request.ip),
         },
         async (request, reply) => {
@@ -54,7 +55,7 @@ export function registerIdentityRoutes(app: FastifyInstance, config: AppConfig):
         },
       );
 
-      api.post('/auth/logout', async (request, reply) => {
+      api.post('/auth/logout', { config: { auth: sessionOnly() } }, async (request, reply) => {
         const ctx = requireContext(request);
         if (ctx.sessionId !== null) {
           await logout(app.db, ctx.sessionId, actorOf(request, ctx));
@@ -64,39 +65,43 @@ export function registerIdentityRoutes(app: FastifyInstance, config: AppConfig):
         return { data: { ok: true } };
       });
 
-      api.get('/auth/me', async (request, reply) => {
+      api.get('/auth/me', { config: { auth: sessionOnly() } }, async (request, reply) => {
         const ctx = requireContext(request);
         noStore(reply);
         return { data: await loadSessionInfo(app.db, ctx.userId, ctx.csrfToken ?? '') };
       });
 
-      api.post('/auth/change-password', async (request, reply) => {
-        const ctx = requireContext(request);
-        const body = ChangePasswordRequest.parse(request.body);
-        // Reserve the attempt before verifying so parallel guesses cannot all pass the check.
-        const wait = changePasswordFailures.consume(ctx.userId);
-        if (wait > 0) throw rateLimited(wait);
-        try {
-          await changePassword(app.db, {
-            userId: ctx.userId,
-            sessionId: ctx.sessionId,
-            currentPassword: body.currentPassword,
-            newPassword: body.newPassword,
-            ctx: actorOf(request, ctx),
-          });
-        } catch (error) {
-          // Only a wrong current password counts; policy or server errors give the attempt back.
-          if (!(
-            error instanceof AppError && error.details?.reason === 'CURRENT_PASSWORD_INCORRECT'
-          )) {
-            changePasswordFailures.refund(ctx.userId);
+      api.post(
+        '/auth/change-password',
+        { config: { auth: sessionOnly() } },
+        async (request, reply) => {
+          const ctx = requireContext(request);
+          const body = ChangePasswordRequest.parse(request.body);
+          // Reserve the attempt before verifying so parallel guesses cannot all pass the check.
+          const wait = changePasswordFailures.consume(ctx.userId);
+          if (wait > 0) throw rateLimited(wait);
+          try {
+            await changePassword(app.db, {
+              userId: ctx.userId,
+              sessionId: ctx.sessionId,
+              currentPassword: body.currentPassword,
+              newPassword: body.newPassword,
+              ctx: actorOf(request, ctx),
+            });
+          } catch (error) {
+            // Only a wrong current password counts; policy or server errors give the attempt back.
+            if (!(
+              error instanceof AppError && error.details?.reason === 'CURRENT_PASSWORD_INCORRECT'
+            )) {
+              changePasswordFailures.refund(ctx.userId);
+            }
+            throw error;
           }
-          throw error;
-        }
-        changePasswordFailures.reset(ctx.userId);
-        noStore(reply);
-        return { data: { ok: true } };
-      });
+          changePasswordFailures.reset(ctx.userId);
+          noStore(reply);
+          return { data: { ok: true } };
+        },
+      );
 
       done();
     },

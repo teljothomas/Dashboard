@@ -152,6 +152,10 @@ report.financial.view dashboard.view`
 Rules: scope OWN = `created_by = user` or `driver.user_id = user`; DIVISION = record division ∈ user_role
 divisions. NOT_FOUND for out-of-scope. Approval thresholds from `approval_policy` (OD-042). No self-approval
 except OWNER.
+`user_role.division_id` is a limiter: when set it narrows every scope of that assignment (ALL, DIVISION, OWN) to
+that division; DIVISION with no division on the assignment covers nothing; a record whose division is unknown never
+matches a limited grant. Routes declare `config.auth` (`authorize(permission, {scope})`, `sessionOnly()`,
+`publicRoute()`); a route without it cannot be registered (WP-04.3).
 
 ## 4. Device sync contract (details: SYNC_DESIGN §2)
 

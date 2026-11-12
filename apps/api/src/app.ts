@@ -10,6 +10,7 @@ import {
 } from './modules/core/attachments/index.js';
 import { registerIdentityRoutes } from './modules/identity/routes.js';
 import { registerSyncRoutes } from './modules/sync/index.js';
+import { publicRoute, registerAuthorize } from './plugins/authorize.js';
 import { registerCsrf } from './plugins/csrf.js';
 import { registerErrorHandling } from './plugins/errorHandler.js';
 import { genRequestId, registerRequestId } from './plugins/requestId.js';
@@ -70,6 +71,10 @@ export function buildApp(config: AppConfig, options: BuildAppOptions = {}): Fast
   registerRequestContext(app, options.requestContext ?? ((a) => registerSession(a, config)));
   if (!options.requestContext) {
     registerCsrf(app);
+  }
+  // After the provider and CSRF (onRequest order), before any route (onRoute check).
+  registerAuthorize(app);
+  if (!options.requestContext) {
     registerIdentityRoutes(app, config);
   }
   registerSyncRoutes(app);
@@ -78,7 +83,7 @@ export function buildApp(config: AppConfig, options: BuildAppOptions = {}): Fast
   });
 
   // Runs SELECT 1; reports status only (no version or host details, SECURITY).
-  app.get('/health', async (_request, reply) => {
+  app.get('/health', { config: { auth: publicRoute() } }, async (_request, reply) => {
     if (await isDatabaseHealthy(db)) {
       return { status: 'ok' };
     }

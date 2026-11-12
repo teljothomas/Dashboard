@@ -4,22 +4,22 @@ Project: Meat Trading, Processing & Logistics ERP (working name: TradeX ERP)
 Current release: none
 Project state: FOUNDATION_IN_PROGRESS
 Application coding: STARTED (Phase 02 foundation packages and apps exist)
-Current stage: READY (WP-04.2 done; WP-04.3 next)
-Current phase: PHASE-04 (2/6)
-Current task: WP-04.3
+Current stage: READY (WP-04.3 done; WP-04.4 next)
+Current phase: PHASE-04 (3/6)
+Current task: WP-04.4
 Assigned model: Sonnet 5.5
-Last updated: 2026-11-11
-Last verified commit: WP-04.2 commit on main (`git log --oneline`)
-Next action: WP-04.3
+Last updated: 2026-11-12
+Last verified commit: WP-04.3 commit on main (`git log --oneline`)
+Next action: WP-04.4
 
 ## CURRENT POSITION
 
 Stage: READY
 Phase: PHASE-04 Authentication and permissions
-Task ID: WP-04.3
+Task ID: WP-04.4
 Task status: NOT_STARTED
 Branch: main (pushed to origin 2026-11-11, owner approved; later pushes still need approval, so commits after that push are local only)
-Last completed work unit: WP-04.2 login, sessions, CSRF, rate limiting (Sonnet 5.5, 2026-11-11)
+Last completed work unit: WP-04.3 authorization and scopes (Sonnet 5.5, 2026-11-12)
 
 ## PHASE TRACKER
 
@@ -31,7 +31,7 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | 01 | Architecture and contracts | COMPLETE | Baseline v1.0 (WP-01.R / 01.X run on demand) |
 | 02 | Application foundation | COMPLETE | 5/5 (gate passed 2026-11-11) |
 | 03 | Database and core services | COMPLETE | 6/6 (gate passed 2026-11-11) |
-| 04 | Authentication and permissions | IN_PROGRESS | 2/6 |
+| 04 | Authentication and permissions | IN_PROGRESS | 3/6 |
 | 05 | Tally connector read | NOT_STARTED | 0/9 |
 | 06 | Meat trading and inventory | NOT_STARTED | 0/6 |
 | 07 | Factory and labour | NOT_STARTED | 0/5 |
@@ -67,19 +67,20 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | WP-03.6 | Phase 03 gate: full suite, migrations on an empty DB (0001..0003 apply, second run no-op), build, e2e, audit; QUALITY_GATES `db:migrate` and `test:integration` VERIFIED | domain 57, contracts 40, api 69, web 105; integration 150 (x2); e2e 1; build 147.48 KB gzip; audit clean | WP-03.6 commit |
 | WP-04.1 | Identity: migration `0004_identity.sql` (app_user, role, permission, role_permission, user_role, device, session, password_reset, login_attempt; FKs client_mutation.device_id and sync_conflict.device_id to device), `modules/identity` (42-permission catalogue, six system roles, default matrix, insert-only idempotent `seedIdentity`, argon2id password module with policy, `createOwner`), CLI `user:create-owner` (hidden input; stdin only when NODE_ENV=test) | unit api 81 (12 new); integration 167 (17 new, incl. CLI subprocess); lint, typecheck, prettier, build clean; audit clean | WP-04.1 commit |
 | WP-04.2 | Auth: `POST /auth/login`, `/auth/logout`, `GET /auth/me`, `POST /auth/change-password`; session plugin sets `request.ctx` (roles, grants, deviceId, csrfToken), HMAC double-submit CSRF, DB-derived lockout (5/user, 20/IP per 15 min) + in-memory request limiter, device auto-registration, must-change-password gate, contracts `identity.ts` | unit api 91 (10 new), contracts 40, web 105; integration 199 (32 new; 3 review fixes), clean runs (1 earlier unidentified failure, not reproduced); lint, typecheck, prettier, build clean; audit clean | WP-04.2 commit |
+| WP-04.3 | Authorization: `plugins/authorize.ts` (`authorize(permission, {scope})`, `sessionOnly()`, `publicRoute()` via `config.auth`; `onRoute` throws for an undeclared route; 401/403 in `onRequest`, scope resolver in `preHandler`, out of scope is 404; `app.routeInventory`), `lib/scope.ts` (`grantCovers`, `inScope`, `assertInScope`, `assertNotSelf`, `scopeWhere`), route inventory test (public allowlist, reviewed session-only list, 401 on every protected route), attachments, sync, identity and `/health` routes declared, CSRF connector exemption judged by matched route; INTERFACES §3 limiter note | unit api 128 (37 new), integration 199 (unchanged); lint, typecheck, prettier, build clean; audit clean | WP-04.3 commit |
 
 ## ACTIVE TASK
 
-Objective: WP-04.3 authorization and scopes.
-Assigned agent: Sonnet 5.5
-Required prompt: prompts/phases/PHASE-04-AUTHENTICATION-PERMISSIONS.md -> WP-04.3
-Required context files: INTERFACES §3; SECURITY §3
-Allowed modifications: `apps/api/src/plugins/authorize.ts`, `apps/api/src/lib/scope.ts`, `apps/api/test/routes.inventory.test.ts`, retrofit of attachments and sync routes (plus the carried attachment-dedupe blocker if the owner decides)
-Acceptance criteria: per WP-04.3
+Objective: WP-04.4 user and role management, password reset.
+Assigned agent: Sonnet 5.5 (Haiku-eligible: CRUD route tests following an example)
+Required prompt: prompts/phases/PHASE-04-AUTHENTICATION-PERMISSIONS.md -> WP-04.4
+Required context files: INTERFACES §2 identity rows; SECURITY §2; OPEN_DECISIONS OD-032
+Allowed modifications: `modules/identity/**`, contracts
+Acceptance criteria: per WP-04.4. New routes must declare `config.auth` (the inventory test enforces it); add `/api/v1/auth/reset/complete` as `publicRoute()` (already on the allowlist).
 
 ## OPEN BLOCKERS
 
-- Owner decision, CARRIED INTO PHASE 04 (can land with WP-04.3; not blocking WP-04.1/04.2): attachment dedupe is global by sha256 per DATA_MODEL section 1, so a second user uploading identical bytes gets the first user's id, and `core.attachments.link` does not check who is linking (security review finding, medium). Recommended: per-uploader rows sharing one blob (`UNIQUE (sha256, uploaded_by)`, DATA_MODEL change) and `link` checking uploader or `canRead`. PDF active-content scan is best effort (object streams can hide markers); real controls are attachment disposition and nosniff.
+- Owner decision, CARRIED INTO PHASE 04 (not done in WP-04.3, awaiting owner; not blocking WP-04.4): attachment dedupe is global by sha256 per DATA_MODEL section 1, so a second user uploading identical bytes gets the first user's id, and `core.attachments.link` does not check who is linking (security review finding, medium). Recommended: per-uploader rows sharing one blob (`UNIQUE (sha256, uploaded_by)`, DATA_MODEL change) and `link` checking uploader or `canRead`. PDF active-content scan is best effort (object streams can hide markers); real controls are attachment disposition and nosniff.
 - None for Phase 03. Not blocking: gitleaks and actionlint not installed on the dev PC (secret scan runs in CI; `.github/workflows/ci.yml` is NOT validated with actionlint and has never run on GitHub). .NET SDK absent (blocks WP-05.0).
 
 ## OWNER APPROVAL REQUIRED
@@ -92,6 +93,10 @@ Acceptance criteria: per WP-04.3
 - Later protected operations: VPS purchase/domain (Phase 14), production deploy, live data import, production posting enable (Phase 15).
 
 ## QUALITY GATE
+
+WP-04.3 (executed 2026-11-12):
+- Lint: pass; Typecheck: pass; Prettier: pass; Unit: pass (api 128, 37 new); Integration: 199 pass (unchanged count; one test now declares its ad-hoc route); Build: pass; `pnpm audit --prod`: no known vulnerabilities
+- Not run: e2e (web untouched), security suite, secret scan, `db:migrate` (no migration)
 
 WP-04.2 (executed 2026-11-11):
 - Lint: pass; Typecheck: pass (4 packages); Prettier: pass; Unit: pass (api 91, 10 new; contracts 40; web 105); Integration: 199 pass (32 new, after security-review fixes; earlier build 196 x5), 5 consecutive full runs clean after one earlier full run with 1 unidentified failure; Build: pass; `pnpm audit --prod`: no known vulnerabilities
@@ -131,13 +136,14 @@ Phase 02 gate (WP-02.5):
 
 ## NEXT EXACT ACTION
 
-Task ID: WP-04.3
+Task ID: WP-04.4
 Phase prompt: prompts/phases/PHASE-04-AUTHENTICATION-PERMISSIONS.md
-Model: Sonnet 5.5 (Haiku: no)
-Context: INTERFACES §3; SECURITY §3
-Objective: `authorize(permission, {scope})` route option; `scopeWhere` Kysely helper; `assertNotSelf`; route inventory test (every non-public route declares a permission and returns 401 without a session); retrofit attachments and sync routes with permissions and scopes.
-Expected output: `plugins/authorize.ts`, `lib/scope.ts`, `test/routes.inventory.test.ts`, retrofit diffs.
-Tests: authorization allow/deny per scope, self-approval guard, route inventory fails for a route without a permission declaration.
-Carried blocker: attachment dedupe by sha256 (second uploader gets the first user's id) and `core.attachments.link` actor check; recommended `UNIQUE (sha256, uploaded_by)` plus link checking uploader or `canRead` (DATA_MODEL change; see OPEN BLOCKERS).
-Notes from 04.2: `request.ctx` now has `permissions` (codes), `grants` (`{permission, scope, divisionId}` per role assignment), `roles`, `sessionId`, `csrfToken`, `mustChangePassword`. The session plugin is used unless a test passes `requestContext` (`headerContextProvider`: no CSRF, no `/auth` routes). Route-level CSRF exemption is `config: { csrfExempt: true }`. Public allowlist for the inventory test: `/health`, `/api/v1/auth/login`, `/api/v1/auth/reset/complete` (WP-04.4), `/connector/*`. `/auth/logout`, `/auth/me`, `/auth/change-password` need a session but no permission code (declare them session-only in the inventory). `request.ip` ignores proxies (set `trustProxy` in Phase 14). Admin unlock in WP-04.4 must clear or supersede recent `login_attempt` failures (lock is derived from them; `app_user.locked_until` is unused). `COMMON_PASSWORDS` is a short list (replace before go-live). `startOfflineRuntime()` is still not called from `main.tsx`; WP-04.5 sets `sessionStore.userId` on login, calls `engine.resume()` after re-login, and must send `X-CSRF-Token` and `X-Device-Id` on mutations.
-After this: WP-04.4
+Model: Sonnet 5.5 (Haiku: CRUD route tests after the first endpoint exists)
+Context: INTERFACES §2 identity rows; SECURITY §2; OPEN_DECISIONS OD-032
+Objective: users CRUD (disable, roles with optional division), custom roles (system roles immutable), reset-code issue (shown once) and complete (`/auth/reset/complete`, public), force logout, list sessions/devices, revoke device, `GET /audit` filtered.
+Expected output: `modules/identity/**` routes and services, contracts additions, tests per endpoint including permission denial and audit entries.
+Tests: each endpoint allow/deny, audit rows, system role immutability, reset code single use, lockout clearing (admin unlock must clear or supersede recent `login_attempt` failures; lock is derived from them, `app_user.locked_until` is unused).
+Notes from 04.3: every route needs `config: { auth: authorize('perm') | sessionOnly() | publicRoute() }` or registration throws; a new public or session-only route also needs an entry in `apps/api/test/routes.inventory.test.ts` (public allowlist already lists `/api/v1/auth/reset/complete`). Use `assertInScope`/`scopeWhere`/`assertNotSelf` from `lib/scope.ts` in services. Test header provider accepts `x-test-grants` (JSON) and `x-test-roles`. `request.ip` ignores proxies (set `trustProxy` in Phase 14). `COMMON_PASSWORDS` is a short list (replace before go-live). `startOfflineRuntime()` is still not called from `main.tsx`; WP-04.5 sets `sessionStore.userId` on login, calls `engine.resume()` after re-login, and must send `X-CSRF-Token` and `X-Device-Id` on mutations.
+Open owner decision (carried blocker, not done in 04.3): attachment dedupe by sha256 gives a second uploader the first user's id and `core.attachments.link` does not check the actor. Recommended `UNIQUE (sha256, uploaded_by)` (DATA_MODEL change, migration 0005) plus `link` checking uploader or `canRead`. A `link` actor check alone would break a second uploader, so do both together once the owner approves.
+Open design question: one device per user is not enforced (a device keeps its first owner); ask the owner if wanted.
+After this: WP-04.5
