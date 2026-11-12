@@ -107,6 +107,21 @@ Service: auto-start (delayed), recovery = restart after 1 min ×3. Install/unins
 PowerShell scripts in `agent/deploy/`. Logs: Serilog rolling files 7 days + Windows Event Log (errors).
 `TradeXAgent.exe status` prints lease, last heartbeat, journal counts, last error.
 
+Implementation notes (WP-05.3, `agent/`, solution `TradeX.TallyAgent.sln`):
+- Projects built so far: `src/TradeX.Agent.Core` (signing, DPAPI key store, cloud client, journal, lease/heartbeat runtime,
+  status), `src/TradeX.Agent.Service` (`TradeXAgent.exe`, net10.0-windows, Windows Service host, `run`, `register`, `status`,
+  `version`), `tests/TradeX.Agent.Tests` (xUnit v3), `tests/TradeX.Agent.JournalKillHelper` (crash test helper).
+  `Tally` and `tools/TallySimulator` arrive with WP-05.4; until then the service uses `NoTallyClientProbe` (Tally always
+  unreachable), so a real service never takes the lease. The extension points are `ITallyProbe` and `IAgentWork`.
+- Key file ACL: SYSTEM and Administrators full, no inheritance. `install.ps1` adds read for the service account after
+  `register`. The key is generated in memory and written only after the cloud accepts the registration.
+- Local lease deadline = time the last successful heartbeat was sent + 90 s TTL - 10 s margin (no clock agreement needed);
+  work is cancelled by token at that deadline, on LEASE_STALE and on a 401. `HeartbeatSeconds` is limited to 30.
+- Journal states beyond section 6: `import_journal.state` is `PREPARED` then `ACKED`. Post states only move forward.
+- `register` flags: `register <code> [--cloud <url>]` (writes `appsettings.json` when given). Exit codes: 0 ok, 1 failed,
+  2 not configured or not registered, 3 journal corrupt.
+- Installed .NET: the agent is framework dependent; the Tally PC needs the .NET 10 Runtime machine-wide.
+
 ## 7. Posting and recovery algorithm (agent)
 
 ```

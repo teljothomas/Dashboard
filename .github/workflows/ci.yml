@@ -91,4 +91,22 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Windows job for the Tally agent (.NET build and test) is added in Phase 05 (WP-05.0).
+  agent:
+    # Tally agent (.NET 10, Windows only: DPAPI, Windows Service). global.json pins the SDK and selects the
+    # Microsoft Testing Platform runner that `dotnet test --solution` needs on .NET 10.
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: agent/global.json
+
+      - name: Build (warnings are errors)
+        working-directory: agent
+        run: dotnet build TradeX.TallyAgent.sln --configuration Release
+
+      - name: Test
+        working-directory: agent
+        run: dotnet test --solution TradeX.TallyAgent.sln --configuration Release --no-build

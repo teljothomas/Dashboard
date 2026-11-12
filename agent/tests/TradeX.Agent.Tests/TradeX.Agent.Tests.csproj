@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <NoWarn>$(NoWarn);xUnit1051</NoWarn>
+    <RootNamespace>TradeX.Agent.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TradeX.Agent.JournalKillHelper\TradeX.Agent.JournalKillHelper.csproj" />
+    <ProjectReference Include="..\..\src\TradeX.Agent.Core\TradeX.Agent.Core.csproj" />
+    <ProjectReference Include="..\..\src\TradeX.Agent.Service\TradeX.Agent.Service.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\fixtures\signature-vector.json" Link="fixtures\signature-vector.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

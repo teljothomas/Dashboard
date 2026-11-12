@@ -25,7 +25,7 @@ CI workflow `.github/workflows/ci.yml`: YAML parses, `docker compose config` ok 
 | Build | `pnpm build` | VERIFIED 2026-11-11 (Phase 03 gate: web initial JS 147.48 KB gzip) |
 | Dependency audit | `pnpm audit --prod` | VERIFIED 2026-11-11 (no known vulnerabilities) |
 | Secret scan | `gitleaks detect --no-banner` | NOT VERIFIED locally: gitleaks not installed on dev PC. CI job `secret-scan` (gitleaks-action) is defined in `.github/workflows/ci.yml` but has not run (no remote run yet) |
-| Agent build/test | `dotnet build agent/TradeX.TallyAgent.sln` / `dotnet test agent/TradeX.TallyAgent.sln` | PLANNED (.NET 10.0.404 SDK installed 2026-11-12; solution to be created in WP-05.3) |
+| Agent build/test | from `agent/`: `dotnet build TradeX.TallyAgent.sln` / `dotnet test --solution TradeX.TallyAgent.sln` | VERIFIED 2026-11-12 (WP-05.3: build 0 warnings 0 errors, Debug and Release; 67 tests pass). On .NET 10 `dotnet test` needs `--solution` and `agent/global.json` (Microsoft.Testing.Platform runner). CI job `agent` (windows-latest) defined, never run on GitHub, not validated with actionlint |
 
 Environment facts observed 2026-11-11 on dev PC: Node v24.11.0, pnpm 12.8.1, npm 11.6.1, git 2.51.0,
 Docker CLI present (daemon state not verified), dotnet NOT installed, psql NOT installed.
