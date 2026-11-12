@@ -18,14 +18,119 @@ export const OWNER = {
     mustChangePassword: false,
   },
   roles: ['OWNER'],
-  permissions: ['users.manage', 'roles.manage', 'audit.view', 'trip.view', 'expense.view'].map(
-    (permission) => ({ permission, scope: 'ALL', divisionId: null }),
-  ),
+  permissions: [
+    'users.manage',
+    'roles.manage',
+    'audit.view',
+    'trip.view',
+    'expense.view',
+    'dashboard.view',
+    'tally.connector.manage',
+    'tally.data.view',
+  ].map((permission) => ({ permission, scope: 'ALL', divisionId: null })),
   csrfToken: CSRF,
+};
+
+export const TALLY_COMPANY_ID = '01930000-0000-7000-8000-0000000000c1';
+export const REGISTRATION_CODE = 'WXYZ-2345-ABCD';
+
+const TALLY_STATUS = {
+  companyId: TALLY_COMPANY_ID,
+  displayName: 'Acme Meats',
+  tallyName: 'Acme Meats Pvt Ltd With A Fairly Long Registered Company Name',
+  isTest: true,
+  postingMode: 'DISABLED',
+  lease: {
+    holderAgentId: '01930000-0000-7000-8000-0000000000e1',
+    holderMachineName: 'TALLY-PC',
+    epoch: 4,
+    expiresAt: '2030-01-01T00:05:00.000Z',
+    active: true,
+  },
+  lastHeartbeat: {
+    agentId: '01930000-0000-7000-8000-0000000000e1',
+    at: '2030-01-01T00:00:00.000Z',
+    tallyReachable: true,
+    companyMatch: true,
+    tallyVersion: 'TallyPrime 7.0',
+    journalPending: 0,
+    error: null,
+  },
+  watermarks: [
+    {
+      stream: 'VOUCHERS',
+      lastAlterId: 5400,
+      lastSuccessAt: '2030-01-01T00:00:00.000Z',
+      lastFullReconAt: null,
+    },
+  ],
+  freshness: { asOf: '2030-01-01T00:00:00.000Z', stale: true, staleAfterHours: 24 },
+};
+
+const TALLY_COMPANY = {
+  id: TALLY_COMPANY_ID,
+  displayName: 'Acme Meats',
+  tallyName: 'Acme Meats Pvt Ltd With A Fairly Long Registered Company Name',
+  companyNumber: '',
+  booksFrom: '2026-04-01',
+  tallyGuid: null,
+  fingerprint: 'fp',
+  isTest: true,
+  postingMode: 'DISABLED',
+  createdAt: '2026-11-01T08:00:00.000Z',
+  version: 1,
+};
+
+const TALLY_AGENT = {
+  id: '01930000-0000-7000-8000-0000000000e1',
+  companyId: TALLY_COMPANY_ID,
+  machineName: 'TALLY-PC',
+  agentVersion: '0.1.0',
+  status: 'ACTIVE',
+  registeredAt: '2026-11-02T08:00:00.000Z',
+  lastSeenAt: '2030-01-01T00:00:00.000Z',
+  lastStatus: null,
+  isLeaseHolder: true,
+};
+
+const TALLY_LEDGER = {
+  source: 'TALLY',
+  asOf: '2030-01-01T00:00:00.000Z',
+  id: 'l1',
+  companyId: TALLY_COMPANY_ID,
+  guid: 'guid-l1',
+  name: 'Sharma Traders And Sons Wholesale Meat Suppliers Limited',
+  parentGroup: 'Sundry Debtors',
+  isParty: true,
+  gstin: '27ABCDE1234F1Z5',
+  openingBalance: '1250.50',
+  archivedInTally: false,
+};
+
+const TALLY_VOUCHER = {
+  source: 'TALLY',
+  asOf: '2030-01-01T00:00:00.000Z',
+  id: 'v1',
+  companyId: TALLY_COMPANY_ID,
+  guid: 'guid-v1',
+  voucherTypeName: 'Sales',
+  baseType: 'SALES',
+  voucherNumber: 'S-101',
+  voucherDate: '2026-11-10',
+  reference: null,
+  partyLedgerName: 'Sharma Traders And Sons Wholesale Meat Suppliers Limited',
+  narration: null,
+  amount: '5000.00',
+  isCancelled: false,
+  isDeletedInTally: false,
+  erpEventId: null,
+  alterId: 77,
 };
 
 export interface FakeApi {
   readonly requests: string[];
+  /** How many registration codes the fake has issued. */
+  registrationCodesIssued: () => number;
   readonly csrfFailures: string[];
   signedIn: () => boolean;
   /** The next sign-in answers with this user instead of the owner. */
@@ -54,6 +159,7 @@ export async function installFakeApi(
   let current = OWNER;
   const requests: string[] = [];
   const csrfFailures: string[] = [];
+  let registrationCodesIssued = 0;
 
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
@@ -118,6 +224,25 @@ export async function installFakeApi(
             },
           ],
         });
+      case 'GET /tally/status':
+        return json(route, 200, { data: { companies: [TALLY_STATUS] } });
+      case 'GET /tally/companies':
+        return json(route, 200, { data: [TALLY_COMPANY] });
+      case 'GET /tally/agents':
+        return json(route, 200, { data: [TALLY_AGENT] });
+      case `POST /tally/companies/${TALLY_COMPANY_ID}/registration-code`:
+        registrationCodesIssued += 1;
+        return json(route, 201, {
+          data: {
+            companyId: TALLY_COMPANY_ID,
+            code: REGISTRATION_CODE,
+            expiresAt: '2030-01-01T00:15:00.000Z',
+          },
+        });
+      case 'GET /tally/ledgers':
+        return json(route, 200, { data: [TALLY_LEDGER] });
+      case 'GET /tally/vouchers':
+        return json(route, 200, { data: [TALLY_VOUCHER] });
       default:
         return json(route, 404, {
           error: { code: 'NOT_FOUND', message: `No fake for ${key}`, requestId: 'e2e' },
@@ -128,6 +253,7 @@ export async function installFakeApi(
   return {
     requests,
     csrfFailures,
+    registrationCodesIssued: () => registrationCodesIssued,
     signedIn: () => signedIn,
     setNextUser: (user) => {
       current = user;

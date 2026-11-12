@@ -28,6 +28,23 @@ const RoleEditorPage = lazy(() =>
 const AuditPage = lazy(() =>
   import('../features/admin/AuditPage').then((m) => ({ default: m.AuditPage })),
 );
+const TallyStatusPage = lazy(() =>
+  import('../features/tally/TallyStatusPage').then((m) => ({ default: m.TallyStatusPage })),
+);
+const TallyCompaniesPage = lazy(() =>
+  import('../features/tally/TallyCompaniesPage').then((m) => ({ default: m.TallyCompaniesPage })),
+);
+const TallyLedgersPage = lazy(() =>
+  import('../features/tally/TallyLedgersPage').then((m) => ({ default: m.TallyLedgersPage })),
+);
+const TallyVouchersPage = lazy(() =>
+  import('../features/tally/TallyVouchersPage').then((m) => ({ default: m.TallyVouchersPage })),
+);
+const TallyVoucherDetailPage = lazy(() =>
+  import('../features/tally/TallyVoucherDetailPage').then((m) => ({
+    default: m.TallyVoucherDetailPage,
+  })),
+);
 
 /** A page that needs one of the permissions of its nav entry. UI hint only: the API authorizes. */
 function forNavItem(to: string, element: ReactNode): ReactNode {
@@ -74,6 +91,17 @@ export const routes: RouteObject[] = [
           { path: 'admin/roles/new', element: requires('roles.manage', <RoleEditorPage />) },
           { path: 'admin/roles/:id', element: requires('roles.manage', <RoleEditorPage />) },
           { path: 'admin/audit', element: requires('audit.view', <AuditPage />) },
+          { path: 'tally', element: requires('dashboard.view', <TallyStatusPage />) },
+          {
+            path: 'tally/companies',
+            element: requires('tally.connector.manage', <TallyCompaniesPage />),
+          },
+          { path: 'tally/ledgers', element: requires('tally.data.view', <TallyLedgersPage />) },
+          { path: 'tally/vouchers', element: requires('tally.data.view', <TallyVouchersPage />) },
+          {
+            path: 'tally/vouchers/:guid',
+            element: requires('tally.data.view', <TallyVoucherDetailPage />),
+          },
           { path: '*', element: <PlaceholderPage titleKey="page.notFound.title" /> },
         ],
       },

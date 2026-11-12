@@ -23,6 +23,9 @@ export function MorePage() {
   const canUsers = useCan('users.manage');
   const canRoles = useCan('roles.manage');
   const canAudit = useCan('audit.view');
+  const canTallyStatus = useCan('dashboard.view');
+  const canTallyManage = useCan('tally.connector.manage');
+  const canTallyData = useCan('tally.data.view');
 
   return (
     <section className="space-y-6">
@@ -51,6 +54,22 @@ export function MorePage() {
             {canUsers ? <MoreLink to="/admin/users" labelKey="admin.users.title" /> : null}
             {canRoles ? <MoreLink to="/admin/roles" labelKey="admin.roles.title" /> : null}
             {canAudit ? <MoreLink to="/admin/audit" labelKey="admin.audit.title" /> : null}
+          </ul>
+        </div>
+      ) : null}
+
+      {canTallyStatus || canTallyManage || canTallyData ? (
+        <div>
+          <h2 className="mb-2 text-sm font-semibold tracking-wide text-slate-600 uppercase">
+            {t('tally.section')}
+          </h2>
+          <ul className="space-y-2">
+            {canTallyStatus ? <MoreLink to="/tally" labelKey="tally.link.status" /> : null}
+            {canTallyManage ? (
+              <MoreLink to="/tally/companies" labelKey="tally.link.companies" />
+            ) : null}
+            {canTallyData ? <MoreLink to="/tally/ledgers" labelKey="tally.link.ledgers" /> : null}
+            {canTallyData ? <MoreLink to="/tally/vouchers" labelKey="tally.link.vouchers" /> : null}
           </ul>
         </div>
       ) : null}
