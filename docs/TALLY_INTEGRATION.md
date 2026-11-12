@@ -34,8 +34,10 @@ Multiple company copies are never merged automatically; reconciliation is an acc
 
 ## 3. Tally PC configuration (applied in Phase 05 only with owner approval)
 
-- Enable TallyPrime to act as server on a local port (default 9000) — exact menu path to be confirmed during
-  WP-05.1 and written into §8.
+- Enable TallyPrime to act as server on a local port (default 9000). Documented menu path (WP-05.1,
+  DOC_ONLY, not yet seen on the 7.0 test PC; confirm in WP-05.7): Exchange > Data Synchronization >
+  Data Synchronization Configuration; set "TallyPrime act as" to Server (or Both), choose the Port, leave
+  "Enable ODBC" No. A company must be loaded. Source: https://help.tallysolutions.com/pre-requisites-for-integrations/.
 - Windows Firewall: explicit inbound **block** rule for that port on all profiles; agent connects to
   `127.0.0.1` only. Agent refuses to start if configured host is not loopback.
 - Tally must be running with the authoritative company loaded for sync; agent never starts/closes Tally
@@ -130,9 +132,29 @@ in Tally in v1 (reversals are new vouchers).
 
 ## 8. Verified protocol (filled by WP-05.1 spike — EMPTY until verified)
 
-| Capability | Verified request | Verified response notes | Date | Evidence file |
-|---|---|---|---|---|
-| (none yet) | | | | |
+Status legend: `DOC_ONLY` = taken from official documentation, never run against Tally (WP-05.7 must confirm);
+`NOT VERIFIED — do not rely` = nothing documented. Primary source: JSON integration page
+https://help.tallysolutions.com/tally-prime-integration-using-json-1/ (updated 2026-05-20) and its five linked payload
+samples (voucher import payload/response, voucher collection payload/response, ledger collection payload).
+Request shape: HTTP POST to `http://127.0.0.1:<port>`; headers `content-type`, `version: 1`, `tallyrequest`
+(Export/Import), `type` (Data/Collection/Object/Function), `id`, optional `detailed-response`; body keys
+`static_variables`, `fetchlist`/`fetch_List`, `tdlmessage`, `tallymessage`. `svCurrentCompany` is mandatory in
+`static_variables` (without it Tally uses the active company, so the agent must always send it). Use JSONEx
+(`svExportFormat` / `svVchImportFormat` = `jsonex`; recommended for new integrations from 7.0). No XML fallback
+needed for the rows below that are DOC_ONLY.
+
+| Item | Capability | Status | Verified request | Response notes / consequence | Date | Evidence |
+|---|---|---|---|---|---|---|
+| (a) | Company info | NOT VERIFIED — do not rely | none documented as a request type | Company identity check (BR-020 fingerprint) cannot rely on a company-info call. Candidate: Company collection or a report export; decide in WP-05.7. `svCurrentCompany` selects the company but returns no identity. | 2026-11-12 | none |
+| (b) | Ledger collection export | DOC_ONLY | headers `tallyrequest: export`, `type: collection`, `id: Ledger`; body `fetch_List` Name, Parent, Closing Balance | Stock items also documented (`id: StockItem`). Groups, units, voucher types, cost centres: NOT VERIFIED (likely the same collection pattern, confirm). **ALTERID filter: NOT VERIFIED.** Consequence: incremental master sync cannot assume ALTERID; plan full master re-export plus compare until confirmed. | 2026-11-12 | fixtures/tally/request-ledger-collection.json |
+| (c) | Voucher export | DOC_ONLY | `id: TSPLVoucherColl` with a `tdlmessage` collection definition (`Type: Voucher`, `Native Method` list) | Response has `guid`, `remoteid`, `vchkey`, `masterid`, `isdeleted`, `allledgerentries` (amount strings, `isdeemedpositive`). **Date-range and ALTERID filters: NOT VERIFIED.** Consequence: until confirmed, import by re-exporting a date window and diffing by `guid`; the watermark design in SYNC_DESIGN §4 must not depend on ALTERID. | 2026-11-12 | fixtures/tally/request-voucher-collection.json, response-voucher-collection.json |
+| (d) | Ledger closing balances | DOC_ONLY | ledger collection with `fetch_List` containing `Closing Balance` | Value format and sign convention not shown in a sample. Parse tolerant, confirm in WP-05.7. | 2026-11-12 | fixtures/tally/request-ledger-collection.json |
+| (e) | Voucher import (create) | DOC_ONLY (partial) | headers `tallyrequest: Import`, `type: Data`, `id: Vouchers`; `svVchImportFormat: jsonex`; body `tallymessage` with `metadata {type: Voucher, vchtype, action: Create, objview}` | Documented body is a Sales invoice only. Receipt/Payment/Journal body shape NOT VERIFIED. Blocks Phase 11 design, not Phase 05. | 2026-11-12 | fixtures/tally/request-voucher-import-headers.json |
+| (f) | Import response | DOC_ONLY | `detailed-response: Yes` gives counts | `data.import_result`: created, altered, deleted, `lastvchid`, `lastmid`, combined, ignored, errors, cancelled, exceptions, vchnumber. Only counts: no per-voucher error text. Posting verification therefore must re-query (already mandatory). | 2026-11-12 | fixtures/tally/response-voucher-import.json |
+| (g) | GUID/REMOTEID supplied on import | NOT VERIFIED — do not rely | none | Neither term appears in the documented import sample. Export returns `guid` and `remoteid`. Consequence: the ERP cannot assume it chooses the voucher GUID; marker in narration remains the identity (ADR-031) and the agent must capture the GUID by re-query after posting. | 2026-11-12 | none |
+| (h) | Query voucher by narration/reference marker | NOT VERIFIED — do not rely | none | No documented filter in the collection sample, and the sample export carries no narration key. Fallback: export the voucher collection with `Narration` as a native method (undocumented, confirm) and match `[ERP:<uuid>]` client-side. **If narration cannot be exported, an alternative identity strategy needs an Opus decision before Phase 11 (ESC then).** Confirm first in WP-05.7. | 2026-11-12 | none |
+| (i) | Unknown-ledger error format | NOT VERIFIED — do not rely | none | Only `status` "1"/"0" and the `errors` counter are documented. Treat any `errors > 0` or `status != "1"` as failure and re-query. | 2026-11-12 | none |
+| (j) | Encoding | DOC_ONLY | `content-type: application/json;charset=utf-8` (ASCII/UTF-8 with BOM) or `;charset=utf-16` (UTF-16 LE BOM) | Tally replies in UTF-16 only when a charset is specified; the charset must match the real payload. Plain `application/json` needs no charset. Agent: send UTF-8, decode by BOM/charset, test with a non-ASCII ledger name in WP-05.7. | 2026-11-12 | JSON page, headers table |
 
 ## 9. Test environments
 

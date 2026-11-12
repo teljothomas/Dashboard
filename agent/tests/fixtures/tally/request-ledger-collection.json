@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "content-type": "application/json",
+    "version": "1",
+    "tallyrequest": "export",
+    "type": "collection",
+    "id": "Ledger"
+  },
+  "body": {
+    "static_variables": [
+      { "name": "svExportFormat", "value": "jsonex" },
+      { "name": "svCurrentCompany", "value": "Test Company" }
+    ],
+    "fetch_List": ["Name", "Parent", "Closing Balance"]
+  }
+}

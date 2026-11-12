@@ -1,0 +1,35 @@
+{
+  "status": "1",
+  "data": {
+    "collection": [
+      {
+        "metadata": {
+          "type": "Voucher",
+          "remoteid": "00000000-0000-4000-8000-000000000001-00000001",
+          "vchkey": "00000000-0000-4000-8000-000000000001-0000b2b3:00000008",
+          "vchtype": "Receipt",
+          "objview": "Accounting Voucher View"
+        },
+        "date": { "type": "Date", "value": "20250401" },
+        "guid": "00000000-0000-4000-8000-000000000001-00000001",
+        "vouchertypename": "Receipt",
+        "vouchernumber": "1",
+        "isdeleted": false,
+        "masterid": { "type": "Number", "value": " 1" },
+        "amount": { "type": "Amount", "value": "1000.00" },
+        "allledgerentries": [
+          {
+            "ledgername": { "type": "String", "value": "Customer A" },
+            "isdeemedpositive": { "type": "Logical", "value": false },
+            "amount": { "type": "Amount", "value": "1000.00" }
+          },
+          {
+            "ledgername": { "type": "String", "value": "Bank Account" },
+            "isdeemedpositive": { "type": "Logical", "value": true },
+            "amount": { "type": "Amount", "value": "-1000.00" }
+          }
+        ]
+      }
+    ]
+  }
+}

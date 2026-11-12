@@ -1,0 +1,18 @@
+{
+  "status": "1",
+  "data": {
+    "import_result": {
+      "created": 1,
+      "altered": 0,
+      "deleted": 0,
+      "lastvchid": 70,
+      "lastmid": 0,
+      "combined": 0,
+      "ignored": 0,
+      "errors": 0,
+      "cancelled": 0,
+      "exceptions": 0,
+      "vchnumber": 2
+    }
+  }
+}

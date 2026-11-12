@@ -1,0 +1,28 @@
+{
+  "headers": {
+    "content-type": "application/json",
+    "version": "1",
+    "tallyrequest": "export",
+    "type": "collection",
+    "id": "TSPLVoucherColl"
+  },
+  "body": {
+    "static_variables": [
+      { "name": "svExportFormat", "value": "jsonex" },
+      { "name": "svCurrentCompany", "value": "Test Company" }
+    ],
+    "tdlmessage": [
+      {
+        "definitions": [
+          {
+            "metadata": { "name": "TSPLVoucherColl", "type": "Collection" },
+            "attributes": [
+              { "Type": "Voucher" },
+              { "Native Method": "VoucherNumber, VoucherTypeName, Date, Amount" }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

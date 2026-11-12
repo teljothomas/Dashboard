@@ -1,0 +1,13 @@
+{
+  "headers": {
+    "content-type": "application/json",
+    "version": "1",
+    "tallyrequest": "Import",
+    "type": "Data",
+    "id": "Vouchers"
+  },
+  "body_static_variables": [
+    { "name": "svVchImportFormat", "value": "jsonex" },
+    { "name": "svCurrentCompany", "value": "Test Company" }
+  ]
+}
