@@ -34,6 +34,14 @@ public interface ICloudClient
     Task<HeartbeatResponse> HeartbeatAsync(HeartbeatRequest request, CancellationToken ct);
     Task<IReadOnlyList<WatermarkDto>> GetWatermarksAsync(CancellationToken ct);
     Task<VersionResponse> GetVersionAsync(CancellationToken ct);
+
+    /// <summary>
+    /// Sends an already serialised <see cref="ImportBatchRequest{TRecord}"/> body. The body is a string so the journal can
+    /// keep the exact payload on disk and resend it after a network loss; the batch id makes the resend idempotent.
+    /// </summary>
+    Task<ImportBatchResponse> PostImportBatchAsync(string batchJson, CancellationToken ct);
+
+    Task<ReconSnapshotResponse> PostReconSnapshotAsync(ReconSnapshotRequest request, CancellationToken ct);
 }
 
 public sealed record CloudRetryPolicy(int MaxRetries, TimeSpan BaseDelay)
@@ -48,7 +56,8 @@ public sealed record CloudRetryPolicy(int MaxRetries, TimeSpan BaseDelay)
 /// </summary>
 public sealed class CloudClient : ICloudClient
 {
-    internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
+    /// <summary>Wire serialisation: camelCase, nulls written (the cloud schemas use nullable-with-default fields).</summary>
+    public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.Never,
     };
@@ -94,10 +103,23 @@ public sealed class CloudClient : ICloudClient
     public Task<VersionResponse> GetVersionAsync(CancellationToken ct) =>
         SendAsync<VersionResponse>(HttpMethod.Get, $"{Base}/version", null, true, ct);
 
-    private async Task<T> SendAsync<T>(HttpMethod method, string path, object? body, bool signed, CancellationToken ct)
+    public Task<ImportBatchResponse> PostImportBatchAsync(string batchJson, CancellationToken ct) =>
+        SendRawAsync<ImportBatchResponse>(HttpMethod.Post, $"{Base}/import-batches", System.Text.Encoding.UTF8.GetBytes(batchJson), ct);
+
+    public Task<ReconSnapshotResponse> PostReconSnapshotAsync(ReconSnapshotRequest request, CancellationToken ct) =>
+        SendAsync<ReconSnapshotResponse>(HttpMethod.Post, $"{Base}/recon-snapshots", request, true, ct);
+
+    private Task<T> SendAsync<T>(HttpMethod method, string path, object? body, bool signed, CancellationToken ct)
+        where T : class =>
+        SendBytesAsync<T>(method, path, body is null ? null : JsonSerializer.SerializeToUtf8Bytes(body, body.GetType(), Json), signed, ct);
+
+    private Task<T> SendRawAsync<T>(HttpMethod method, string path, byte[] payload, CancellationToken ct)
+        where T : class =>
+        SendBytesAsync<T>(method, path, payload, true, ct);
+
+    private async Task<T> SendBytesAsync<T>(HttpMethod method, string path, byte[]? payload, bool signed, CancellationToken ct)
         where T : class
     {
-        var payload = body is null ? null : JsonSerializer.SerializeToUtf8Bytes(body, body.GetType(), Json);
         Exception? last = null;
 
         for (var attempt = 0; attempt <= _retry.MaxRetries; attempt++)

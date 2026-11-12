@@ -24,6 +24,15 @@ public sealed class AgentOptions
     /// <summary>Heartbeat period on its own timer (30 s; the lease lives 90 s).</summary>
     public int HeartbeatSeconds { get; set; } = 30;
 
+    /// <summary>Minimum time between import cycles (masters, vouchers, balances). Commands and a restart run one at once.</summary>
+    public int ImportIntervalSeconds { get; set; } = 300;
+
+    /// <summary>
+    /// First month (1-12) of the financial year, used only to size the FULL_RECON window. 4 = April (Indian FY).
+    /// The cloud also holds <c>fy_start_month</c>; the agent identity does not carry it yet, so it is set here.
+    /// </summary>
+    public int FinancialYearStartMonth { get; set; } = 4;
+
     public int HttpTimeoutSeconds { get; set; } = 30;
 
     public int MaxRetries { get; set; } = 4;
@@ -62,6 +71,8 @@ public sealed class AgentOptions
         if (TallyPort is < 1 or > 65535) problems.Add("TallyPort must be 1-65535.");
         if (MainLoopSeconds is < 5 or > 3600) problems.Add("MainLoopSeconds must be 5-3600.");
         if (HeartbeatSeconds is < 5 or > 30) problems.Add("HeartbeatSeconds must be 5-30 (lease lives 90 s; a third leaves room for two missed beats).");
+        if (ImportIntervalSeconds is < 30 or > 86_400) problems.Add("ImportIntervalSeconds must be 30-86400.");
+        if (FinancialYearStartMonth is < 1 or > 12) problems.Add("FinancialYearStartMonth must be 1-12.");
         if (HttpTimeoutSeconds is < 5 or > 300) problems.Add("HttpTimeoutSeconds must be 5-300.");
         if (MaxRetries is < 0 or > 10) problems.Add("MaxRetries must be 0-10.");
         if (RetryBaseMilliseconds is < 10 or > 60_000) problems.Add("RetryBaseMilliseconds must be 10-60000.");

@@ -25,6 +25,12 @@ public sealed class TallySimulator : IDisposable
     /// <summary>The JSON to return for voucher collection exports.</summary>
     public string VoucherResponse { get; set; } = DefaultVoucherResponse;
 
+    /// <summary>
+    /// Responses for other collection ids (Group, Unit, StockItem, VoucherType, CostCentre), keyed by the <c>id</c>
+    /// header. An id with no entry answers an empty, successful collection.
+    /// </summary>
+    public Dictionary<string, string> MasterResponses { get; } = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>The JSON to return for import requests.</summary>
     public string ImportResponse { get; set; } = DefaultImportResponse;
 
@@ -149,7 +155,32 @@ public sealed class TallySimulator : IDisposable
         var id = LastRequestHeaders.GetValueOrDefault("id", "");
         if (id.Equals("TSPLVoucherColl", StringComparison.OrdinalIgnoreCase))
             return VoucherResponse;
-        return LedgerResponse;
+        if (id.Equals("Ledger", StringComparison.OrdinalIgnoreCase))
+            return LedgerResponse;
+        return MasterResponses.GetValueOrDefault(id, EmptyCollectionResponse);
+    }
+
+    private const string EmptyCollectionResponse = """{"status":"1","data":{"collection":[]}}""";
+
+    /// <summary>Takes the simulator offline (Tally "closed"): stops listening so connections are refused.</summary>
+    public void Pause()
+    {
+        Fault = SimulatorFault.Down;
+        if (!_listener.IsListening) return;
+        try { _listener.Stop(); } catch (ObjectDisposedException) { }
+        try { _loop?.Wait(TimeSpan.FromSeconds(2)); } catch (AggregateException) { }
+    }
+
+    /// <summary>
+    /// Starts listening after the simulator was created or started with <see cref="SimulatorFault.Down"/> (Tally "opened
+    /// again"), and clears the fault.
+    /// </summary>
+    public void Resume()
+    {
+        Fault = SimulatorFault.None;
+        if (_listener.IsListening) return;
+        _listener.Start();
+        _loop = Task.Run(ListenAsync);
     }
 
     private static int FindFreePort()

@@ -4,7 +4,28 @@ using System.Text.Json;
 namespace TradeX.Agent.Tally;
 
 /// <summary>Parsed Tally ledger (master) from a collection export.</summary>
-public sealed record TallyLedger(string Name, string Parent, decimal ClosingBalance);
+public sealed record TallyLedger(string Name, string Parent, decimal ClosingBalance, string? Guid = null, decimal? OpeningBalance = null);
+
+/// <summary>Master kinds the agent imports (contracts <c>MasterRecord.kind</c>).</summary>
+public enum TallyMasterKind
+{
+    Group,
+    Ledger,
+    StockItem,
+    Unit,
+    VoucherType,
+    CostCentre,
+}
+
+/// <summary>One master from a collection export. Only the fields that exist for its kind are filled.</summary>
+public sealed record TallyMaster(
+    TallyMasterKind Kind,
+    string? Guid,
+    string Name,
+    string? Parent,
+    string? UnitName = null,
+    decimal? OpeningBalance = null,
+    decimal? ClosingBalance = null);
 
 /// <summary>Parsed ledger entry within a voucher.</summary>
 public sealed record TallyLedgerEntry(string LedgerName, bool IsDeemedPositive, decimal Amount);
@@ -62,12 +83,45 @@ public static class TallyParsers
             var name = GetStringValue(item, "name") ?? "";
             var parent = GetStringValue(item, "parent") ?? "";
             var balance = GetDecimalValue(item, "closing balance") ?? GetDecimalValue(item, "closingbalance") ?? 0m;
+            var guid = NullIfBlank(GetStringValue(item, "guid"));
+            var opening = GetDecimalValue(item, "opening balance") ?? GetDecimalValue(item, "openingbalance");
             if (!string.IsNullOrWhiteSpace(name))
-                list.Add(new TallyLedger(name, parent, balance));
+                list.Add(new TallyLedger(name, parent, balance, guid, opening));
         }
 
         return list;
     }
+
+    /// <summary>
+    /// Parse a master collection (group, ledger, stock item, unit, voucher type, cost centre). Tolerant: a missing guid
+    /// stays null (the importer decides what to do), blank names are skipped. Does not look at the status field; the
+    /// client checks that before parsing.
+    /// </summary>
+    public static IReadOnlyList<TallyMaster> ParseMasters(string json, TallyMasterKind kind)
+    {
+        using var doc = JsonDocument.Parse(json);
+        if (!TryGetCollection(doc.RootElement, out var collection)) return [];
+
+        var list = new List<TallyMaster>();
+        foreach (var item in collection.EnumerateArray())
+        {
+            var name = GetStringValue(item, "name");
+            if (string.IsNullOrWhiteSpace(name)) continue;
+
+            list.Add(new TallyMaster(
+                kind,
+                NullIfBlank(GetStringValue(item, "guid")),
+                name,
+                NullIfBlank(GetStringValue(item, "parent")),
+                NullIfBlank(GetStringValue(item, "baseunits")) ?? NullIfBlank(GetStringValue(item, "base units")),
+                GetDecimalValue(item, "opening balance") ?? GetDecimalValue(item, "openingbalance"),
+                GetDecimalValue(item, "closing balance") ?? GetDecimalValue(item, "closingbalance")));
+        }
+
+        return list;
+    }
+
+    private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     /// <summary>Parse a voucher collection response JSON string into voucher records.</summary>
     public static IReadOnlyList<TallyVoucher> ParseVouchers(string json)

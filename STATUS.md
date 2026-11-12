@@ -4,22 +4,22 @@ Project: Meat Trading, Processing & Logistics ERP (working name: TradeX ERP)
 Current release: none
 Project state: FOUNDATION_IN_PROGRESS
 Application coding: STARTED (Phase 02 foundation packages and apps exist)
-Current stage: READY (Phase 04 COMPLETE; WP-05.0, 05.1, 05.2, 05.3, 05.4, 05.6 done; WP-05.5 ready)
-Current phase: PHASE-05 (6/9)
-Current task: WP-05.5 Import pipeline end-to-end
-Assigned model: Sonnet 5.5
+Current stage: READY (Phase 04 COMPLETE; WP-05.0 to 05.6 done; WP-05.7 owner gate G2 pending; WP-05.8 review ready)
+Current phase: PHASE-05 (7/9)
+Current task: WP-05.8 Opus review REV-05 and Phase 05 gate (WP-05.7 stays pending the owner gate)
+Assigned model: Opus 5.5 (opus-architect)
 Last updated: 2026-11-12
-Last verified commit: WP-05.4 commit on main (`git log --oneline`)
-Next action: execute WP-05.5 Import pipeline end-to-end
+Last verified commit: WP-05.5 commit on main (`git log --oneline`)
+Next action: execute WP-05.8 (REV-05); WP-05.7 runs when the owner gate G2 is open
 
 ## CURRENT POSITION
 
 Stage: READY
 Phase: PHASE-05 Tally connector read
-Task ID: WP-05.5 Import pipeline end-to-end
+Task ID: WP-05.8 Opus review and Phase 05 gate
 Task status: READY
-Branch: main (pushed to origin 2026-11-11 and again 2026-11-12 through WP-05.6 commit 9589fd0, owner asked for it each time; later pushes, including the WP-05.0 record, WP-05.3, and WP-05.4 commits, still need approval)
-Last completed work unit: WP-05.4 Tally read client and simulator (99 xUnit tests pass), 2026-11-12
+Branch: main (pushed to origin 2026-11-11 and again 2026-11-12 through WP-05.6 commit 9589fd0, owner asked for it each time; later pushes, including the WP-05.0 record, WP-05.3, WP-05.4 and WP-05.5 commits, still need approval)
+Last completed work unit: WP-05.5 Import pipeline end-to-end (131 xUnit tests pass), 2026-11-12
 
 ## PHASE TRACKER
 
@@ -32,7 +32,7 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | 02 | Application foundation | COMPLETE | 5/5 (gate passed 2026-11-11) |
 | 03 | Database and core services | COMPLETE | 6/6 (gate passed 2026-11-11) |
 | 04 | Authentication and permissions | COMPLETE | 6/6 (gate passed 2026-11-12; REV-04 APPROVED_WITH_FIXES, fixes applied) |
-| 05 | Tally connector read | IN_PROGRESS | 6/9 (05.0, 05.1, 05.2, 05.3, 05.4, 05.6 done; next: 05.5 Import pipeline; 05.7 needs owner gate G2; 05.8 after agent WPs) |
+| 05 | Tally connector read | IN_PROGRESS | 7/9 (05.0 to 05.6 done; 05.7 needs owner gate G2 and does not block Phase 06; next: 05.8 REV-05 and gate) |
 | 06 | Meat trading and inventory | NOT_STARTED | 0/6 |
 | 07 | Factory and labour | NOT_STARTED | 0/5 |
 | 08 | Drivers, fleet, loans | NOT_STARTED | 0/6 |
@@ -78,12 +78,13 @@ Execution order (PROMPT_REGISTRY §1): 01 → 00 → 02 → 03 → 04 → 05 →
 | WP-05.2 | Cloud connector API and Tally mirror: migration `0006_tally_mirror.sql` (connector, lease, watermark, batch, masters, vouchers, balances, minimal `party`), contracts `connector.ts` and `tally.ts`, `modules/tally` (signature plugin, registration, lease/epoch, heartbeat, import apply with content hash and no ALTERID dependency, recon snapshots, `tally.onVouchersImported`, admin and mirror routes), shared signature vector, INTERFACES/DATA_MODEL/SYNC_DESIGN notes | unit domain 57, contracts 40, api 151, web 168; integration 312 (55 new: TS-S05, TS-T11, batch idempotency, watermark, deletion snapshot, TS-A08/A09); lint, typecheck, prettier, build clean | WP-05.2 commit |
 | WP-05.6 | Web Tally status and administration: `features/tally` (status page: heartbeat, lease holder, watermarks, stale badge, as-of, refresh; companies page: create company, one-time registration code in component state only with copy and hide, agents list and revoke with confirmation; read-only ledger and voucher browse and voucher detail, every row Source: Tally with as-of), lazy permission-guarded routes, Tally section in More | web unit 188 (20 new); e2e 6 (3 new, fake API); lint, typecheck, prettier, build clean (initial JS 195.72 KB gzip) | WP-05.6 commit |
 | WP-05.4 | Tally read client (`TradeX.Agent.Tally`: JSON client, tolerant parsers, loopback guard, `ITallyProbe`) and simulator (`TallySimulator` in tools with fault injection Down/Slow/WrongCompany/Malformed); wired into `AgentHost.cs` replacing `NoTallyClientProbe` | agent: 99 xUnit pass (Debug & Release, 32 new); build 0 warnings 0 errors | WP-05.4 commit |
+| WP-05.5 | Import pipeline: `ImportWork : IAgentWork` in `TradeX.Agent.Tally/Import` (journal resend first, due by interval/restart/command, read all of Tally before sending, masters then vouchers then balances in batches <= 500, payload file + `import_journal` PREPARED before the network write and ACKED after, resend rewrites the epoch, empty batch keeps cloud freshness moving, permanent refusals closed, reconciliation on start, nightly 02:00 and FULL_RECON), `ImportMapper` (wire records, content hashes, string clipping, party and base type through group and voucher-type parents), Tally exports now throw on status other than 1 and export GUID, `ITallyReader`, `ExportMastersAsync`, `ICloudClient.PostImportBatchAsync` and `PostReconSnapshotAsync`, `WorkContext.Commands` and `ConsumeCommand`, options `ImportIntervalSeconds` and `FinancialYearStartMonth`, simulator `MasterResponses`, `Pause()`, `Resume()`, `AgentHost` registers the work. Tests use the real runtime, `TallyClient` over loopback to `TallySimulator`, a real SQLite journal and an in-process `FakeApiServer` that mirrors the Node apply rules (NOT the Node API). Local decisions: scenarios live in `agent/tests/TradeX.Agent.Tests` (not a separate `agent/tests/Integration` project); no ALTERID, whole-collection export plus hash skip | agent: 131 xUnit pass in Debug and Release (32 new: TS-T01, TS-T04, TS-T07 import side, TS-T10, TS-T12, batching 500, refusal, stale lease, commands); 131 pass in Release too; build 0 warnings 0 errors | not committed yet (see `git log`) |
 | WP-05.3 | Agent foundation in `agent/` (solution `TradeX.TallyAgent.sln`, .NET 10, nullable, warnings as errors, central package versions): `Core` (RequestSigner with shared vector, `DpapiKeyStore` LocalMachine DPAPI + restricted ACL, `CloudClient` with retries, full jitter and a fresh nonce per attempt, `SigningHandler`, DTOs, `AgentJournal` SQLite WAL + synchronous=FULL + integrity check + forward-only post states, `AgentRuntime` main loop and separate heartbeat timer, `LeaseSession` local deadline, registration, status), `Service` (`TradeXAgent.exe run/register/status/version`, Windows Service host, Serilog file + Event Log), deploy scripts `install/uninstall/upgrade.ps1` (parsed, NOT run), CI job `agent` (windows-latest, not run on GitHub), TALLY_INTEGRATION section 6 notes, QUALITY_GATES agent row VERIFIED. Local decisions: Tally client absent so the service uses `NoTallyClientProbe` (never takes the lease until WP-05.4); `IAgentWork` is the hook for import and posting | agent: 67 xUnit pass (Debug and Release, run twice in Debug); build 0 warnings 0 errors; publish ok (4.95 MB); `status`, `run` unregistered (exit 2), `register` without config (exit 2) and with an unreachable cloud (exit 1) exercised by hand; Node side `signature.test.ts` 11 pass | 104fc75 |
 
 ## ACTIVE TASK
 
-Objective: WP-05.4 Tally read client and simulator per prompts/phases/PHASE-05-TALLY-CONNECTOR-READ.md (Tally HTTP client JSON with XML fallback, parsers from the DOC_ONLY fixtures, TallySimulator, `ITallyProbe` implementation replacing `NoTallyClientProbe`).
-Assigned agent: Sonnet 5.5
+Objective: WP-05.8 REV-05 per prompts/phases/PHASE-05-TALLY-CONNECTOR-READ.md: signature, lease and import correctness, no inbound exposure, no posting paths; fix CRITICAL and HIGH; Phase 05 gate.
+Assigned agent: Opus 5.5 (opus-architect)
 Required prompt: prompts/phases/PHASE-05-TALLY-CONNECTOR-READ.md
 
 ## OPEN BLOCKERS
@@ -102,6 +103,11 @@ Required prompt: prompts/phases/PHASE-05-TALLY-CONNECTOR-READ.md
 - Later protected operations: VPS purchase/domain (Phase 14), production deploy, live data import, production posting enable (Phase 15).
 
 ## QUALITY GATE
+
+WP-05.5 (executed 2026-11-12):
+- Agent: `dotnet build` 0 warnings 0 errors; `dotnet test --solution TradeX.TallyAgent.sln` Debug 131 pass and Release 131 pass (32 new)
+- Scenarios against the simulator: TS-T01 (Tally off 24 h then back drains), TS-T04 (answer lost after apply, same batch resent, nothing duplicated), TS-T07 import side (company mismatch and a wrong or malformed Tally answer send nothing and flag nothing), TS-T10 (resend under a new epoch), TS-T12 (altered voucher upserted, deleted voucher flagged by FULL_RECON, flag cleared when it returns)
+- Not run: the cloud side was an in-process fake (`FakeApiServer`), not the Node API and database; no real Tally; root `pnpm` lint, typecheck, test, integration, e2e, audit (no Node source changed); install scripts and the Windows service still never executed
 
 WP-05.4 (executed 2026-11-12):
 - Agent: `dotnet build` Debug and Release 0 warnings 0 errors; `dotnet test --solution` 99 pass (Debug and Release, 32 new tests); `TallySimulator` tested with fault injection (Down, Slow, WrongCompany, Malformed)
@@ -177,10 +183,12 @@ Phase 02 gate (WP-02.5):
 
 ## NEXT EXACT ACTION
 
-Task ID: WP-05.5 Import pipeline end-to-end
-Action: Execute WP-05.5 in prompts/phases/PHASE-05-TALLY-CONNECTOR-READ.md (read its Context list first). Implement import orchestration in agent (`IAgentWork` implementation for import pipeline: masters, vouchers, balances, recon snapshots, batching <= 500, journal recovery, company verify gate, heartbeat commands).
-Model: Sonnet 5.5
-Carry from WP-05.4: `TradeX.Agent.Tally` is ready with `TallyClient`, parsers, and `TallySimulator`. `AgentHost` registers `TallyClient` as `ITallyProbe`.
-Carry from WP-05.3: `IAgentWork` (Core/Runtime/Abstractions.cs) is the hook for import and posting work; `AgentJournal` has the import_journal API; `heartbeat` `commands` is stored in `AgentRuntime.PendingCommands`; bash tool has no `dotnet` on PATH, use PowerShell.
+Task ID: WP-05.8 Opus review and Phase 05 gate (WP-05.7 pending owner gate G2, non-blocking for Phase 06)
+Action: Run REV-05 through the opus-architect agent per prompts/phases/PHASE-05-TALLY-CONNECTOR-READ.md WP-05.8: signature/lease/import correctness, no inbound exposure, no posting paths. Then the gate: `dotnet build` and `dotnet test --solution agent/TradeX.TallyAgent.sln`, `pnpm --filter api test:integration`, lint, typecheck. Next after the gate: WP-06.1.
+Model: Opus 5.5
+Review points to hand over from WP-05.5: (1) the cloud never queues heartbeat commands yet (`lease.ts` returns `[]`), so FULL_RECON and REFRESH_MASTERS are agent-ready but unreachable; (2) the agent skips records by an in-memory hash, a cloud-side data loss is only healed by restart or REFRESH_MASTERS; (3) reconciliation trusts a complete export, guarded by the status-1 check, mapping skips (no date, more than 200 lines) still list the guid; (4) `FinancialYearStartMonth` is an agent option, the cloud's `fy_start_month` is not delivered to the agent; (5) end-to-end against the real Node API and database was not run (fake server only).
+Carry from WP-05.5: `ITallyReader`, `ImportWork`, `ImportMapper`, `ImportKeys` (journal kv `import.last_success_at`, `import.last_error`, `import.last_recon_at`) exist; the `status` command does not print them yet. Payload files live in `%ProgramData%\TradeXAgent\import\`. Tally master kinds other than ledger and stock item, and `GUID`, `Opening Balance`, `BaseUnits` fetch fields, are NOT VERIFIED until WP-05.7.
+Carry from WP-05.4: `TradeX.Agent.Tally` has `TallyClient`, parsers and `TallySimulator`.
+Carry from WP-05.3: `IAgentWork` is the hook for import and posting work; bash tool has no `dotnet` on PATH, use PowerShell.
 Carry from WP-05.2: migration is 0006; connector responses are raw (no data envelope); watermark only advances on success; recon snapshots flag `is_deleted_in_tally`.
 Carry-over gate items: PHASE-10 section B (`GET /audit` redaction), PHASE-14 section C/D (`trustProxy` matters for the registration limiter and audit ip, full common-password list).

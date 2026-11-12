@@ -311,5 +311,7 @@ public sealed class RuntimeTests : IDisposable
         public Task<HeartbeatResponse> HeartbeatAsync(HeartbeatRequest request, CancellationToken ct) => inner.HeartbeatAsync(request, ct);
         public Task<IReadOnlyList<WatermarkDto>> GetWatermarksAsync(CancellationToken ct) => inner.GetWatermarksAsync(ct);
         public Task<VersionResponse> GetVersionAsync(CancellationToken ct) => inner.GetVersionAsync(ct);
+        public Task<ImportBatchResponse> PostImportBatchAsync(string batchJson, CancellationToken ct) => inner.PostImportBatchAsync(batchJson, ct);
+        public Task<ReconSnapshotResponse> PostReconSnapshotAsync(ReconSnapshotRequest request, CancellationToken ct) => inner.PostReconSnapshotAsync(request, ct);
     }
 }

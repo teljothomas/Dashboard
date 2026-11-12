@@ -122,6 +122,41 @@ Implementation notes (WP-05.3, `agent/`, solution `TradeX.TallyAgent.sln`):
   2 not configured or not registered, 3 journal corrupt.
 - Installed .NET: the agent is framework dependent; the Tally PC needs the .NET 10 Runtime machine-wide.
 
+Implementation notes (WP-05.5, import pipeline, `TradeX.Agent.Tally/Import`):
+- `ImportWork : IAgentWork` implements main loop steps 4, 5 and 7 (no posting). It runs only while the lease is held and
+  the company verified (the runtime gates that). Order per loop: resend every unacknowledged `import_journal` row, then, if
+  due, read Tally, then send, then reconcile.
+- Due = first run after start, `ImportIntervalSeconds` (default 300, 30 to 86400) since the last good cycle, or a
+  `REFRESH_MASTERS` / `FULL_RECON` command from the heartbeat. Commands are taken off `PendingCommands` once
+  (`WorkContext.ConsumeCommand`); the cloud does not queue commands yet (`lease.ts` returns `[]`), so nothing sends them today.
+- ALTERID is not used (section 8 b, c NOT VERIFIED). Every cycle exports the whole ledger and voucher collections and
+  sends only records whose content hash differs from what the cloud last acknowledged (in memory; empty after a restart,
+  so a restart resends everything once, which is idempotent). Alter ids go on the wire as null.
+- Read first, send second: masters (optional kinds, then ledgers), vouchers, ledgers again as balances, all from one read.
+  Any Tally failure (HTTP error, status not 1, malformed JSON, timeout) abandons the cycle: nothing is sent and no
+  reconciliation runs. Exports now throw on status other than 1 instead of returning an empty list, because an empty list
+  would make a reconciliation flag every voucher deleted. Optional master kinds (group, unit, stock item, voucher type, cost
+  centre) are NOT VERIFIED: a failure on one is logged and that kind is skipped for the cycle.
+- Batches of at most 500. Each batch is written to `%ProgramData%\TradeXAgent\import\<batchId>.json` (flushed), journalled
+  `PREPARED`, posted, then `ACKED` and the file deleted. A resend rewrites `epoch` to the current lease epoch; the batch id keeps
+  it idempotent (the cloud hash ignores the epoch). A stream with nothing new still sends one empty batch: the cloud
+  freshness clock (`last_success_at`) only moves on an applied batch.
+- Permanent refusals (400, 409 other than lease errors, 422, 413) are logged, the journal row is closed so it cannot block
+  later batches, the records are not remembered as sent, and `import.last_error` stays set until a clean cycle. Lease stale,
+  lease held, 401 and network failures keep the row `PREPARED`.
+- Reconciliation snapshot: on start, then nightly (first cycle at or after 02:00 local, once per local day), and on
+  `FULL_RECON`. Routine window = previous and current month; full window = whole financial year from
+  `FinancialYearStartMonth` (default 4, the cloud holds `fy_start_month` but the identity does not carry it yet), one request
+  with `isFull=true`. Tally's own deleted vouchers are not listed; a voucher with an unreadable date is always listed
+  (listing can only prevent a deletion flag). Not journalled: a failed snapshot is rebuilt from a fresh read.
+- Mapping limits (confirm in WP-05.7): masters without a guid are keyed `NAME:<KIND>:<name>`; voucher export carries no
+  party, cancelled flag or inventory lines, so `partyLedgerName` is the first ledger line whose ledger sits under Sundry
+  Debtors or Sundry Creditors (through group parents when the group export works), `isCancelled` is always false and
+  `inventoryLines` are not sent; base type follows the voucher type's parent chain, else `OTHER`; balances are sent for
+  ledgers under Cash-in-Hand, Bank Accounts, Bank OD A/c, Sundry Debtors, Sundry Creditors; vouchers with more than 200 ledger
+  lines or no readable date are skipped and counted in the log. Strings are clipped to the cloud limits so one record cannot
+  poison a batch.
+
 ## 7. Posting and recovery algorithm (agent)
 
 ```

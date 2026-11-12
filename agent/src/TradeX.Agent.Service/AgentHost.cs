@@ -11,6 +11,7 @@ using TradeX.Agent.Core.Registration;
 using TradeX.Agent.Core.Runtime;
 using TradeX.Agent.Core.Security;
 using TradeX.Agent.Tally;
+using TradeX.Agent.Tally.Import;
 
 namespace TradeX.Agent.Service;
 
@@ -85,11 +86,20 @@ public static class AgentHost
                     builder.Services.AddSingleton(journal);
                     builder.Services.AddSingleton<ICloudClient>(cloud);
                     builder.Services.AddSingleton(TimeProvider.System);
-                    builder.Services.AddSingleton<ITallyProbe>(sp =>
+                    builder.Services.AddSingleton(sp =>
                     {
                         var tallyLog = sp.GetRequiredService<ILoggerFactory>().CreateLogger<TallyClient>();
                         return new TallyClient(options, identity.ExpectedCompany.TallyName, tallyLog);
                     });
+                    builder.Services.AddSingleton<ITallyProbe>(sp => sp.GetRequiredService<TallyClient>());
+                    builder.Services.AddSingleton<ITallyReader>(sp => sp.GetRequiredService<TallyClient>());
+                    builder.Services.AddSingleton<IAgentWork>(sp => new ImportWork(
+                        sp.GetRequiredService<ICloudClient>(),
+                        sp.GetRequiredService<ITallyReader>(),
+                        options,
+                        Path.Combine(paths.Root, "import"),
+                        sp.GetRequiredService<TimeProvider>(),
+                        sp.GetRequiredService<ILoggerFactory>().CreateLogger<ImportWork>()));
                     builder.Services.AddSingleton<AgentRuntime>();
                     builder.Services.AddHostedService<AgentWorker>();
 

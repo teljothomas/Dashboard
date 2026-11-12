@@ -21,6 +21,9 @@ public sealed class FakeCloud : ICloudClient
     public Func<string, LeaseAcquireResponse> OnAcquire { get; set; } = _ => new LeaseAcquireResponse(1, "2030-01-01T00:00:00.000Z");
     public Func<HeartbeatRequest, HeartbeatResponse> OnHeartbeat { get; set; } = _ => new HeartbeatResponse("2030-01-01T00:00:00.000Z", "DISABLED", []);
 
+    public Func<string, ImportBatchResponse> OnPostBatch { get; set; } = _ => new ImportBatchResponse("APPLIED", 0, 0, 0);
+    public Func<ReconSnapshotRequest, ReconSnapshotResponse> OnPostRecon { get; set; } = _ => new ReconSnapshotResponse(0);
+
     public List<long> Released { get; } = [];
     public List<HeartbeatRequest> Heartbeats { get; } = [];
     public int VerifyCalls { get; private set; }
@@ -55,6 +58,10 @@ public sealed class FakeCloud : ICloudClient
     public Task<IReadOnlyList<WatermarkDto>> GetWatermarksAsync(CancellationToken ct) => Task.FromResult<IReadOnlyList<WatermarkDto>>([]);
 
     public Task<VersionResponse> GetVersionAsync(CancellationToken ct) => Task.FromResult(new VersionResponse("0.1.0", "0.1.0", ""));
+
+    public Task<ImportBatchResponse> PostImportBatchAsync(string batchJson, CancellationToken ct) => Task.FromResult(OnPostBatch(batchJson));
+
+    public Task<ReconSnapshotResponse> PostReconSnapshotAsync(ReconSnapshotRequest request, CancellationToken ct) => Task.FromResult(OnPostRecon(request));
 }
 
 public sealed class FakeTally : ITallyProbe

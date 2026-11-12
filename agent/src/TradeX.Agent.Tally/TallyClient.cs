@@ -14,7 +14,7 @@ namespace TradeX.Agent.Tally;
 /// All requests go through <c>http://127.0.0.1:&lt;port&gt;</c>.
 /// Protocol: JSON with JSONEx export format; XML fallback is not needed for any verified capability.
 /// </summary>
-public sealed class TallyClient : ITallyProbe, IDisposable
+public sealed class TallyClient : ITallyProbe, ITallyReader, IDisposable
 {
     private readonly HttpClient _http;
     private readonly string _baseUrl;
@@ -62,9 +62,33 @@ public sealed class TallyClient : ITallyProbe, IDisposable
     /// <summary>Export all ledgers from the specified company.</summary>
     public async Task<IReadOnlyList<TallyLedger>> ExportLedgersAsync(CancellationToken ct)
     {
-        var body = BuildExportBody("Ledger", ["Name", "Parent", "Closing Balance"]);
+        var body = BuildExportBody("Ledger", ["Name", "Parent", "GUID", "Opening Balance", "Closing Balance"]);
         var json = await SendExportAsync("collection", "Ledger", body, ct).ConfigureAwait(false);
+        EnsureOk(json, "Ledger");
         return TallyParsers.ParseLedgers(json);
+    }
+
+    /// <summary>
+    /// Export one master kind. Ledger and StockItem collections are documented (TALLY_INTEGRATION section 8 b); group,
+    /// unit, voucher type and cost centre follow the same pattern but are NOT VERIFIED until WP-05.7, so the importer
+    /// treats a failure on those as "kind not available" rather than as a stop.
+    /// </summary>
+    public async Task<IReadOnlyList<TallyMaster>> ExportMastersAsync(TallyMasterKind kind, CancellationToken ct)
+    {
+        var (id, fetch) = kind switch
+        {
+            TallyMasterKind.Group => ("Group", new[] { "Name", "Parent", "GUID" }),
+            TallyMasterKind.Ledger => ("Ledger", new[] { "Name", "Parent", "GUID", "Opening Balance", "Closing Balance" }),
+            TallyMasterKind.StockItem => ("StockItem", new[] { "Name", "Parent", "GUID", "BaseUnits" }),
+            TallyMasterKind.Unit => ("Unit", new[] { "Name", "GUID" }),
+            TallyMasterKind.VoucherType => ("VoucherType", new[] { "Name", "Parent", "GUID" }),
+            TallyMasterKind.CostCentre => ("CostCentre", new[] { "Name", "Parent", "GUID" }),
+            _ => throw new ArgumentOutOfRangeException(nameof(kind)),
+        };
+
+        var json = await SendExportAsync("collection", id, BuildExportBody(id, fetch), ct).ConfigureAwait(false);
+        EnsureOk(json, id);
+        return TallyParsers.ParseMasters(json, kind);
     }
 
     /// <summary>Export vouchers using a TDL collection. Fields include guid, narration, ledger entries.</summary>
@@ -72,7 +96,18 @@ public sealed class TallyClient : ITallyProbe, IDisposable
     {
         var body = BuildVoucherExportBody();
         var json = await SendExportAsync("collection", "TSPLVoucherColl", body, ct).ConfigureAwait(false);
+        EnsureOk(json, "TSPLVoucherColl");
         return TallyParsers.ParseVouchers(json);
+    }
+
+    /// <summary>
+    /// An export answer must say <c>status 1</c>. Anything else (company not found, malformed JSON) is an error, never an
+    /// empty list: an empty list would read as "Tally holds nothing" and a reconciliation would flag every voucher deleted.
+    /// </summary>
+    private static void EnsureOk(string json, string id)
+    {
+        if (!TallyParsers.ParseStatus(json))
+            throw new TallyRequestException($"Tally export '{id}' did not answer status 1 (company not loaded, or not JSON).", json);
     }
 
     /// <summary>Export ledgers with closing balances (same as ExportLedgersAsync — the balance is part of the ledger export).</summary>

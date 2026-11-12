@@ -291,7 +291,11 @@ public sealed class AgentRuntime(
         lock (_gate) session = _session;
         if (session is null || session.IsLost) return;
 
-        var context = new WorkContext(session.Epoch, PostingMode, journal);
+        var context = new WorkContext(session.Epoch, PostingMode, journal)
+        {
+            Commands = PendingCommands,
+            ConsumeCommand = ConsumeCommand,
+        };
         foreach (var work in _works)
         {
             if (session.IsLost) break;
@@ -312,6 +316,17 @@ public sealed class AgentRuntime(
         }
 
         if (!session.IsLost) SetState(AgentState.Active);
+    }
+
+    private bool ConsumeCommand(string command)
+    {
+        lock (_gate)
+        {
+            var remaining = PendingCommands.Where(c => c != command).ToList();
+            var found = remaining.Count != PendingCommands.Count;
+            if (found) PendingCommands = remaining;
+            return found;
+        }
     }
 
     private void LoseLease(LeaseSession session, string reason)

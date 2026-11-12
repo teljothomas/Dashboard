@@ -34,7 +34,17 @@ public interface IAgentWork
     Task RunAsync(WorkContext context, CancellationToken leaseToken);
 }
 
-public sealed record WorkContext(long Epoch, string PostingMode, AgentJournal Journal);
+public sealed record WorkContext(long Epoch, string PostingMode, AgentJournal Journal)
+{
+    /// <summary>Commands the cloud sent with the latest heartbeat answer (for example FULL_RECON).</summary>
+    public IReadOnlyList<string> Commands { get; init; } = [];
+
+    /// <summary>
+    /// Takes a command off the pending list so the work that handles it runs once, not once per heartbeat. Returns true
+    /// when the command was pending. The cloud decides whether it keeps sending it.
+    /// </summary>
+    public Func<string, bool> ConsumeCommand { get; init; } = _ => false;
+}
 
 public enum AgentState
 {
